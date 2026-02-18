@@ -1,0 +1,14 @@
+.audit-in{
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  outline: none;
+  font-size: 13px;
+  min-width: 180px;
+}
+.audit-in:focus{
+  box-shadow: var(--ring);
+  border-color: rgba(217,4,43,.35);
+}
