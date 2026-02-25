@@ -7,10 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Rol extends Model
 {
     protected $table = 'roles';
-
-    protected $fillable = ['nombre','descripcion','is_active','baja'];
-
     public $timestamps = true;
-    const CREATED_AT = 'created_at';
-    const UPDATED_AT = 'updated_at';
+
+    protected $fillable = ['nombre','descripcion','is_active','baja','baja_at','baja_by','baja_motivo'];
+    protected $casts = ['is_active'=>'boolean','baja'=>'boolean','baja_at'=>'datetime'];
+
+    public function modulos()
+    {
+        return $this->belongsToMany(Modulo::class, 'roles_modulos', 'role_id', 'modulo_id')
+            ->withTimestamps();
+    }
 }

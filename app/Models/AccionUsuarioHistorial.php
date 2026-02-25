@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccionUsuarioHistorial extends Model
 {
-    protected $table = 'acciones_usuario_historial';
+    protected $table = 'usuarios_acciones_modulo';
 
     public $timestamps = false;
 

@@ -4,39 +4,28 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Services\AccessService;
+use App\Models\Modulo;
+use App\Models\RolModulo;
 
 class CheckModuleAccess
 {
-    public function handle(Request $request, Closure $next, $modulo, $action = 'ver')
+    public function handle(Request $request, Closure $next, string $moduloRutaOrNombre)
     {
-        $user = auth()->user();
+        $u = auth()->user();
+        if(!$u) return redirect()->route('login');
 
-        if (!$user) {
-            return $request->expectsJson()
-                ? response()->json(['ok' => false, 'message' => 'No autenticado'], 401)
-                : redirect()->route('login');
-        }
+        // Buscar módulo por ruta o nombre
+        $mod = Modulo::where('baja',false)
+            ->where(function($q) use ($moduloRutaOrNombre){
+                $q->where('ruta',$moduloRutaOrNombre)->orWhere('nombre',$moduloRutaOrNombre);
+            })->first();
 
-        // Permitir modulo como id numérico o como nombre
-        $moduloId = is_numeric($modulo)
-            ? (int)$modulo
-            : (int) (DB::table('modulos')->where('nombre', $modulo)->value('id') ?? 0);
+        if(!$mod) abort(403, 'Módulo no existe.');
 
-        if ($moduloId <= 0) {
-            return $request->expectsJson()
-                ? response()->json(['ok' => false, 'message' => 'Módulo no encontrado'], 404)
-                : abort(404, 'Módulo no encontrado');
-        }
+        $has = RolModulo::where('role_id',$u->role_id)->where('modulo_id',$mod->id)->exists();
+        if(!$has) abort(403, 'Sin acceso al módulo.');
 
-        $ok = app(AccessService::class)->can($user, $moduloId, $action);
-
-        if (!$ok) {
-            return $request->expectsJson()
-                ? response()->json(['ok' => false, 'message' => 'Sin permisos'], 403)
-                : abort(403, 'Sin permisos');
-        }
+        $request->attributes->set('current_modulo_id', $mod->id);
 
         return $next($request);
     }

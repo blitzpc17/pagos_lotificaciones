@@ -3,12 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Concerns\HasBajaLogica;
 
 class Empleado extends Model
 {
-    use HasBajaLogica;
-
     protected $table = 'empleados';
 
     protected $fillable = [
@@ -16,8 +13,12 @@ class Empleado extends Model
         'baja','baja_at','baja_by','baja_motivo'
     ];
 
-    public function persona()
-    {
-        return $this->belongsTo(Persona::class, 'persona_id');
-    }
+    protected $casts = [
+        'baja' => 'boolean',
+        'baja_at' => 'datetime',
+    ];
+
+    public function persona() { return $this->belongsTo(Persona::class, 'persona_id'); }
+    public function vendedor(){ return $this->hasOne(Vendedor::class, 'empleado_id'); }
+    public function usuario() { return $this->hasOne(Usuario::class, 'empleado_id'); }
 }

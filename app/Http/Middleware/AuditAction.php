@@ -12,7 +12,7 @@ class AuditAction
         $resp = $next($request);
 
         if (auth()->check()) {
-            DB::table('acciones_usuario_historial')->insert([
+            DB::table('usuarios_acciones_modulo')->insert([
                 'usuario_id' => auth()->id(),
                 'modulo_id' => $moduloId ? (int)$moduloId : null,
                 'accion' => $accion,

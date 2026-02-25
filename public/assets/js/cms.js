@@ -1,3 +1,4 @@
+// public/assets/js/cms.js
 $(function(){
 
   // ===== THEME (persist) =====
@@ -55,7 +56,6 @@ $(function(){
   });
 
   // ===== Active nav (parent stays active when child active by URL) =====
-  // Si un child tiene class active (blade), abre su parent
   $('.nav-link.active').each(function(){
     const parentKey = $(this).data('parent');
     if(parentKey){
@@ -71,9 +71,11 @@ $(function(){
     e.stopPropagation();
     $('#userDropdown').toggle();
   });
+
   $(document).on('click', function(){
     $('#userDropdown').hide();
   });
+
   $('#userDropdown').on('click', function(e){
     e.stopPropagation();
   });
@@ -129,13 +131,15 @@ $(function(){
     });
   });
 
-  // ===== Click outside sidebar =====
+  // ===== Click outside sidebar (FIX: zonas seguras) =====
   $(document).on('click', function(e){
     const $t = $(e.target);
-    const clickedSidebar = $t.closest('#sidebar').length > 0;
-    const clickedHamburger = $t.closest('#btnHamburger').length > 0;
 
-    if(clickedSidebar || clickedHamburger) return;
+    const safe = $t.closest(
+      '#sidebar, #btnHamburger, #userbox, #userbtn, #userDropdown, .dropdown, .swal2-container, .dataTables_wrapper, .modal .box'
+    ).length > 0;
+
+    if(safe) return;
 
     if(isMobile()){
       if($('#sidebar').hasClass('mobile-open')) closeMobileSidebar();
@@ -148,12 +152,6 @@ $(function(){
     }
   });
 
-  // ===== Dashboard demo buttons (si existen) =====
-  $('#btnNotify').on('click', ()=> Swal.fire({ icon:'info', title:'Notificaciones', text:'Aquí abrirías tu panel de notificaciones.', confirmButtonColor:'#D9042B' }));
-  $('#btnQuick').on('click', ()=> Swal.fire({ icon:'success', title:'Acción rápida', text:'Ejecutada.', confirmButtonColor:'#D9042B' }));
-  $('#btnFilter').on('click', ()=> Swal.fire({ icon:'question', title:'Filtros', text:'Aquí mostrarías filtros avanzados.', confirmButtonColor:'#D9042B' }));
-  $('#btnHealth').on('click', ()=> Swal.fire({ icon:'info', title:'Estado del sistema', text:'Detalle del sistema.', confirmButtonColor:'#D9042B' }));
-
   // Resize
   $(window).on('resize', function(){
     if(!isMobile()){
@@ -162,3 +160,74 @@ $(function(){
   });
 
 });
+
+
+// ==============================
+// DataTables defaults GLOBAL
+// ==============================
+if (window.jQuery && $.fn && $.fn.dataTable) {
+  $.extend(true, $.fn.dataTable.defaults, {
+    responsive: true,
+    autoWidth: false,
+    scrollX: false,          // no choca con Responsive
+    pageLength: 10,
+    lengthChange: false,
+    language: {
+      search: "Buscar:",
+      paginate: { previous: "‹", next: "›" },
+      info: "Mostrando _START_ a _END_ de _TOTAL_",
+      infoEmpty: "Sin registros",
+      zeroRecords: "No se encontraron coincidencias",
+      lengthMenu: "Mostrar _MENU_"
+    }
+  });
+}
+
+
+// =============================================
+// DataTables: init responsivo genérico
+// (evita Cannot reinitialise)
+// =============================================
+window.initCmsDataTable = function(selector, opts){
+  const $t = $(selector);
+  if(!$t.length) return null;
+
+  if($.fn.DataTable.isDataTable($t)){
+    $t.DataTable().destroy();
+    $t.find('tbody').empty();
+  }
+  return $t.DataTable(opts || {});
+};
+
+
+// ==============================
+// MAYÚSCULAS (valor real)
+// - Excepto email/password (no lo fuerzo)
+// ==============================
+$(document).on('input', 'input[type="text"], input[type="search"], input[type="tel"], textarea', function(){
+  this.value = (this.value || '').toUpperCase();
+});
+
+
+// ==============================
+// TABS GLOBAL (folder style)
+// ==============================
+$(document).on('click', '.tabs .tab-btn', function(){
+  const $btn = $(this);
+  const tabKey = $btn.data('tab');
+  const $tabs = $btn.closest('.tabs');
+
+  $tabs.find('.tab-btn').removeClass('active');
+  $btn.addClass('active');
+
+  $tabs.find('.tab-panel').removeClass('active');
+  $tabs.find(`.tab-panel[data-panel="${tabKey}"]`).addClass('active');
+});
+
+// helper opcional (abrir siempre en el 1er tab)
+window.resetTabs = function(tabsSelector){
+  const $tabs = $(tabsSelector);
+  if(!$tabs.length) return;
+  const $first = $tabs.find('.tab-btn').first();
+  if($first.length) $first.trigger('click');
+};

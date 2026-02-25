@@ -4,8 +4,9 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,704 +14,1704 @@ class DatabaseSeeder extends Seeder
     {
         DB::transaction(function () {
 
-            // Limpieza opcional (NO borra tablas, solo limpia data para re-seed)
-            // Si prefieres NO limpiar, comenta estas líneas.
-            $this->truncateAll();
-
-            // =========================
-            // 1) ROLES
-            // =========================
-            $roleAdmin = $this->insertRole('ADMIN', 'Acceso total al sistema');
-            $roleVentas = $this->insertRole('VENTAS', 'Operación de ventas/boletas');
-            $roleCobranza = $this->insertRole('COBRANZA', 'Operación de cobros/partidas');
-            $roleSistemas = $this->insertRole('SISTEMAS', 'Soporte/administración técnica');
-
-            // =========================
-            // 2) PERSONAS + USUARIOS
-            // =========================
-            $pAdmin = $this->insertPersona('Hugo', 'Admin', 'Demo', '1996-01-15', 'Usuario administrador demo');
-            $pVentas = $this->insertPersona('Paola', 'Ventas', 'Demo', '1998-08-12', 'Usuario ventas demo');
-            $pCobranza = $this->insertPersona('Carlos', 'Cobranza', 'Demo', '1997-03-03', 'Usuario cobranza demo');
-            $pSistemas = $this->insertPersona('Sergio', 'Sistemas', 'Demo', '1995-11-20', 'Usuario sistemas demo');
-
-            // Usuarios (password: 123456)
-            $uAdmin = $this->insertUsuario($pAdmin, $roleAdmin, 'admin@demo.com', 'admin', '123456');
-            $uVentas = $this->insertUsuario($pVentas, $roleVentas, 'ventas@demo.com', 'ventas', '123456');
-            $uCobranza = $this->insertUsuario($pCobranza, $roleCobranza, 'cobranza@demo.com', 'cobranza', '123456');
-            $uSistemas = $this->insertUsuario($pSistemas, $roleSistemas, 'sistemas@demo.com', 'sistemas', '123456');
-
-            // Backfill baja_by en roles/personas si quieres dejar trazabilidad:
-            DB::table('roles')->update(['baja_by' => $uAdmin]);
-            DB::table('personas')->update(['baja_by' => $uAdmin]);
-
-            // =========================
-            // 3) CONTACTOS PERSONA
-            // =========================
-            $this->insertTelefono($pAdmin, 'principal', '555-111-1111', true, $uAdmin);
-            $this->insertCorreo($pAdmin, 'principal', 'admin@demo.com', true, $uAdmin);
-            $this->insertDireccion($pAdmin, 'principal', 'Av. Principal', '100', null, 'Centro', 'Tuxtla', 'Chiapas', '29000', 'Oficina', true, $uAdmin);
-
-            $this->insertTelefono($pVentas, 'principal', '555-222-2222', true, $uAdmin);
-            $this->insertCorreo($pVentas, 'principal', 'ventas@demo.com', true, $uAdmin);
-
-            $this->insertTelefono($pCobranza, 'principal', '555-333-3333', true, $uAdmin);
-            $this->insertCorreo($pCobranza, 'principal', 'cobranza@demo.com', true, $uAdmin);
-
-            // =========================
-            // 4) MODULOS (Jerarquía) + ROLES_MODULOS
-            // =========================
-            // Parents
-            $mDashboard = $this->insertModulo('Dashboard', '/dashboard', 'fa-solid fa-gauge-high', null, true, 1, $uAdmin);
-            $mCatalogos = $this->insertModulo('Catálogos', null, 'fa-solid fa-layer-group', null, true, 2, $uAdmin);
-            $mOperaciones = $this->insertModulo('Operación', null, 'fa-solid fa-list-check', null, true, 3, $uAdmin);
-            $mSeguridad = $this->insertModulo('Seguridad', null, 'fa-solid fa-shield-halved', null, true, 4, $uAdmin);
-
-            // Children Catálogos
-            $mLotificaciones = $this->insertModulo('Lotificaciones', '/lotificaciones', 'fa-solid fa-map', $mCatalogos, true, 1, $uAdmin);
-            $mSocios = $this->insertModulo('Socios', '/socios', 'fa-solid fa-handshake', $mCatalogos, true, 2, $uAdmin);
-            $mLotes = $this->insertModulo('Lotes', '/lotes', 'fa-solid fa-border-all', $mCatalogos, true, 3, $uAdmin);
-            $mClientes = $this->insertModulo('Clientes', '/clientes', 'fa-solid fa-user-tag', $mCatalogos, true, 4, $uAdmin);
-            $mVendedores = $this->insertModulo('Vendedores', '/vendedores', 'fa-solid fa-user-tie', $mCatalogos, true, 5, $uAdmin);
-            $mEmpleados = $this->insertModulo('Empleados', '/empleados', 'fa-solid fa-id-card', $mCatalogos, true, 6, $uAdmin);
-
-            // Children Operación
-            $mBoletas = $this->insertModulo('Boletas de Pago', '/boletas', 'fa-solid fa-receipt', $mOperaciones, true, 1, $uAdmin);
-            $mPartidas = $this->insertModulo('Partidas', '/partidas', 'fa-solid fa-money-bill-wave', $mOperaciones, true, 2, $uAdmin);
-            $mSolicitudes = $this->insertModulo('Solicitudes', '/solicitudes', 'fa-solid fa-file-signature', $mOperaciones, true, 3, $uAdmin);
-
-            // Children Seguridad
-            $mUsuarios = $this->insertModulo('Usuarios', '/usuarios', 'fa-solid fa-users', $mSeguridad, true, 1, $uAdmin);
-            $mRoles = $this->insertModulo('Roles', '/roles', 'fa-solid fa-id-badge', $mSeguridad, true, 2, $uAdmin);
-            $mAuditoria = $this->insertModulo('Auditoría', '/auditoria', 'fa-solid fa-clock-rotate-left', $mSeguridad, true, 3, $uAdmin);
-
-            // roles_modulos: ADMIN a todo
-            $allModulos = [
-                $mDashboard,$mCatalogos,$mOperaciones,$mSeguridad,
-                $mLotificaciones,$mSocios,$mLotes,$mClientes,$mVendedores,$mEmpleados,
-                $mBoletas,$mPartidas,$mSolicitudes,
-                $mUsuarios,$mRoles,$mAuditoria
+            // Limpieza ligera (opcional). Si ya tienes data real, comenta esto.
+            // OJO: respeta FKs: primero tablas hijas, luego padres.
+            $tables = [
+                'pago_proveedor_partidas',
+                'pago_proveedor',
+                'boletas_partidas',
+                'boletas_pago',
+                'lotes',
+                'lotificacion_socios',
+                'socios',
+                'lotificaciones',
+                'proveedores',
+                'empleados',
+                'vendedores',
+                'clientes',
+                'persona_direcciones',
+                'persona_correos',
+                'persona_telefonos',
+                'usuarios_acciones_modulo',
+                'roles_modulos',
+                'modulos',
+                'usuarios',
+                'roles',
+                'personas',
+                'variables_globales',
+                'solicitudes',
             ];
-            foreach ($allModulos as $mid) {
-                $this->attachRoleModulo($roleAdmin, $mid);
-                $this->attachRoleModulo($roleSistemas, $mid);
+
+            foreach ($tables as $t) {
+                // Si hay error por dependencias, comenta la limpieza.
+                DB::statement("TRUNCATE TABLE {$t} RESTART IDENTITY CASCADE");
             }
 
-            // VENTAS: dashboard + catalogos relevantes + boletas
-            foreach ([$mDashboard,$mCatalogos,$mLotificaciones,$mSocios,$mLotes,$mClientes,$mVendedores,$mBoletas] as $mid) {
-                $this->attachRoleModulo($roleVentas, $mid);
-            }
+            // ---------------------------------------------------------
+            // 1) ROLES
+            // ---------------------------------------------------------
+            $roleAdminId = DB::table('roles')->insertGetId([
+                'nombre' => 'ADMIN',
+                'descripcion' => 'Acceso total',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // COBRANZA: dashboard + operación (partidas/solicitudes) + boletas
-            foreach ([$mDashboard,$mOperaciones,$mBoletas,$mPartidas,$mSolicitudes] as $mid) {
-                $this->attachRoleModulo($roleCobranza, $mid);
-            }
+            $roleVentasId = DB::table('roles')->insertGetId([
+                'nombre' => 'VENTAS',
+                'descripcion' => 'Ventas / boletas / clientes',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // =========================
-            // 5) USUARIOS_ACCIONES_MODULO (Permisos por usuario)
-            // =========================
-            // Admin: todo
-            foreach ($allModulos as $mid) {
-                $this->upsertUsuarioAcciones($uAdmin, $mid, true, true, true, true);
-            }
+            $roleCobranzaId = DB::table('roles')->insertGetId([
+                'nombre' => 'COBRANZA',
+                'descripcion' => 'Cobranza / pagos / partidas',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Ventas: ver + crear/modificar en boletas y catálogos, sin baja fuerte
-            foreach ([$mDashboard,$mCatalogos,$mLotificaciones,$mSocios,$mLotes,$mClientes,$mVendedores] as $mid) {
-                $this->upsertUsuarioAcciones($uVentas, $mid, true, true, true, false);
-            }
-            $this->upsertUsuarioAcciones($uVentas, $mBoletas, true, true, true, false);
+            // ---------------------------------------------------------
+            // 2) PERSONAS + USUARIOS
+            //    REGLA: usuario requiere persona (persona_id NOT NULL)
+            // ---------------------------------------------------------
+            $personaAdminId = DB::table('personas')->insertGetId([
+                'nombres' => 'Hugo',
+                'apellido_paterno' => 'Admin',
+                'apellido_materno' => 'Sistema',
+                'fecha_nacimiento' => null,
+                'notas' => 'Usuario administrador inicial',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Cobranza: partidas sí; boletas solo ver; solicitudes sí
-            $this->upsertUsuarioAcciones($uCobranza, $mDashboard, true, false, false, false);
-            $this->upsertUsuarioAcciones($uCobranza, $mBoletas, true, false, false, false);
-            $this->upsertUsuarioAcciones($uCobranza, $mPartidas, true, true, true, false);
-            $this->upsertUsuarioAcciones($uCobranza, $mSolicitudes, true, true, true, false);
+            $adminUserId = DB::table('usuarios')->insertGetId([
+                'persona_id' => $personaAdminId,
+                'role_id' => $roleAdminId,
+                'email' => 'admin@demo.local',
+                'username' => 'admin',
+                'password_hash' => Hash::make('Admin123*'),
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // =========================
-            // 6) CLIENTES / VENDEDORES / EMPLEADOS (Persona + entidad)
-            // =========================
-            // Clientes
-            $pCliente1 = $this->insertPersona('Ana', 'López', 'Hernández', '1999-05-10', 'Cliente demo 1');
-            $pCliente2 = $this->insertPersona('Luis', 'Martínez', 'Gómez', '1988-02-22', 'Cliente demo 2');
+            // 2 usuarios extra
+            $personaVentasId = DB::table('personas')->insertGetId([
+                'nombres' => 'Ana',
+                'apellido_paterno' => 'Ventas',
+                'apellido_materno' => 'Demo',
+                'fecha_nacimiento' => '1994-07-13',
+                'notas' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            $c1 = $this->insertCliente($pCliente1, 'LOHA990510XXX', 'general', 'Cliente frecuente', $uAdmin);
-            $c2 = $this->insertCliente($pCliente2, 'MAGL880222XXX', 'general', null, $uAdmin);
+            $ventasUserId = DB::table('usuarios')->insertGetId([
+                'persona_id' => $personaVentasId,
+                'role_id' => $roleVentasId,
+                'email' => 'ventas@demo.local',
+                'username' => 'ventas',
+                'password_hash' => Hash::make('Ventas123*'),
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Vendedores
-            $pVend1 = $this->insertPersona('Mario', 'Vendedor', 'Uno', '1992-07-02', 'Vendedor demo 1');
-            $pVend2 = $this->insertPersona('Karla', 'Vendedor', 'Dos', '1994-09-18', 'Vendedor demo 2');
+            $personaCobranzaId = DB::table('personas')->insertGetId([
+                'nombres' => 'Carlos',
+                'apellido_paterno' => 'Cobranza',
+                'apellido_materno' => 'Demo',
+                'fecha_nacimiento' => null,
+                'notas' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            $v1 = $this->insertVendedor($pVend1, 5.00, 'VEND-001', $uAdmin);
-            $v2 = $this->insertVendedor($pVend2, 7.50, 'VEND-002', $uAdmin);
+            $cobranzaUserId = DB::table('usuarios')->insertGetId([
+                'persona_id' => $personaCobranzaId,
+                'role_id' => $roleCobranzaId,
+                'email' => 'cobranza@demo.local',
+                'username' => 'cobranza',
+                'password_hash' => Hash::make('Cobranza123*'),
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Empleados
-            $pEmp1 = $this->insertPersona('Brenda', 'Auxiliar', 'Admin', '1993-12-01', 'Empleado demo 1');
-            $pEmp2 = $this->insertPersona('Oscar', 'Supervisor', 'Zona', '1990-06-14', 'Empleado demo 2');
-
-            $e1 = $this->insertEmpleado($pEmp1, 'AUXILIAR_ADMIN', null, 'EMP-001', 'Operación oficina', $uAdmin);
-            $e2 = $this->insertEmpleado($pEmp2, 'SUPERVISOR', 'Supervisor de campo', 'EMP-002', 'Revisión lotes', $uAdmin);
-
-            // =========================
-            // 7) VARIABLES GLOBALES (JSONB)
-            // =========================
-            $this->insertVariableGlobal('app_config', [
-                'empresa' => 'Lotificaciones Demo',
-                'moneda' => 'MXN',
-                'timezone' => 'America/Mexico_City',
-                'imprimir_logo' => true,
-            ], 'Configuración base de la app', $uAdmin);
-
-            $this->insertVariableGlobal('mobile_flags', [
-                'require_update' => false,
-                'min_version' => '1.0.0',
-                'features' => [
-                    'boletas' => true,
-                    'partidas' => true,
-                    'croquis' => true,
+            // ---------------------------------------------------------
+            // 3) CONTACTOS para personas (tel/correo/dirección)
+            // ---------------------------------------------------------
+            DB::table('persona_telefonos')->insert([
+                [
+                    'persona_id' => $personaAdminId,
+                    'etiqueta' => 'principal',
+                    'telefono' => '2221234567',
+                    'extension' => null,
+                    'es_principal' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
                 ],
-            ], 'Flags para app móvil', $uAdmin);
+                [
+                    'persona_id' => $personaVentasId,
+                    'etiqueta' => 'whatsapp',
+                    'telefono' => '2229876543',
+                    'extension' => null,
+                    'es_principal' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+            ]);
 
-            // =========================
-            // 8) LOTIFICACIONES / SOCIOS / LOTES
-            // =========================
-            $lot1 = $this->insertLotificacion('Fracc. Las Palmas', [
-                'version' => 1,
-                'nota' => 'Croquis demo',
-                'poligonos' => [
-                    ['clave' => 'A-01', 'points' => [[10,10],[80,10],[80,60],[10,60]]],
-                    ['clave' => 'A-02', 'points' => [[90,10],[160,10],[160,60],[90,60]]],
-                ]
-            ], 8, 'Oficina Centro', 'Chiapas', $uAdmin);
+            DB::table('persona_correos')->insert([
+                [
+                    'persona_id' => $personaAdminId,
+                    'etiqueta' => 'principal',
+                    'correo' => 'admin@demo.local',
+                    'es_principal' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+                [
+                    'persona_id' => $personaVentasId,
+                    'etiqueta' => 'principal',
+                    'correo' => 'ventas@demo.local',
+                    'es_principal' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+            ]);
 
-            $lot2 = $this->insertLotificacion('Residencial El Sol', [
-                'version' => 1,
-                'nota' => 'Croquis demo 2',
-                'poligonos' => []
-            ], 6, 'Oficina Norte', 'Chiapas', $uAdmin);
+            DB::table('persona_direcciones')->insert([
+                [
+                    'persona_id' => $personaAdminId,
+                    'etiqueta' => 'casa',
+                    'calle' => 'Av. Demo',
+                    'numero_ext' => '123',
+                    'numero_int' => null,
+                    'colonia' => 'Centro',
+                    'municipio' => 'Puebla',
+                    'estado' => 'Puebla',
+                    'cp' => '72000',
+                    'referencias' => 'Frente al parque',
+                    'es_principal' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+            ]);
 
-            $socio1 = $this->insertSocio('Socio Principal', '#2D6CDF', '555-777-0001', 'socio1@demo.com', $uAdmin);
-            $socio2 = $this->insertSocio('Socio Secundario', '#F59E0B', '555-777-0002', 'socio2@demo.com', $uAdmin);
+            // ---------------------------------------------------------
+            // 4) MODULOS (drawer) + roles_modulos
+            // ---------------------------------------------------------
+            $modCatalogos = DB::table('modulos')->insertGetId([
+                'nombre' => 'Catálogos',
+                'ruta' => null,
+                'icono' => 'fa-list',
+                'parent_id' => null,
+                'es_menu' => true,
+                'orden' => 10,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            $this->attachLotificacionSocio($lot1, $socio1);
-            $this->attachLotificacionSocio($lot1, $socio2);
-            $this->attachLotificacionSocio($lot2, $socio1);
+            $modClientes = DB::table('modulos')->insertGetId([
+                'nombre' => 'Clientes',
+                'ruta' => '/clientes',
+                'icono' => 'fa-users',
+                'parent_id' => $modCatalogos,
+                'es_menu' => true,
+                'orden' => 11,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Lotes lot1
-            $loteA1 = $this->insertLote($lot1, 'A-01', 'A', '01', 'LIBRE', 120000, 150000, 'Lote demo', $uAdmin);
-            $loteA2 = $this->insertLote($lot1, 'A-02', 'A', '02', 'LIBRE', 125000, 155000, null, $uAdmin);
-            $loteA3 = $this->insertLote($lot1, 'A-03', 'A', '03', 'LIBRE', 110000, 140000, null, $uAdmin);
+            $modVendedores = DB::table('modulos')->insertGetId([
+                'nombre' => 'Vendedores',
+                'ruta' => '/vendedores',
+                'icono' => 'fa-user-tie',
+                'parent_id' => $modCatalogos,
+                'es_menu' => true,
+                'orden' => 12,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // Lotes lot2
-            $loteB1 = $this->insertLote($lot2, 'B-01', 'B', '01', 'LIBRE', 98000, 120000, null, $uAdmin);
-            $loteB2 = $this->insertLote($lot2, 'B-02', 'B', '02', 'LIBRE', 105000, 130000, null, $uAdmin);
+            $modLotificaciones = DB::table('modulos')->insertGetId([
+                'nombre' => 'Lotificaciones',
+                'ruta' => '/lotificaciones',
+                'icono' => 'fa-map',
+                'parent_id' => null,
+                'es_menu' => true,
+                'orden' => 20,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // =========================
-            // 9) BOLETAS + PARTIDAS
-            // =========================
-            $folio1 = 'BOL-' . now()->format('Ymd') . '-001';
-            $boleta1 = $this->insertBoletaPago([
-                'folio' => $folio1,
-                'cliente_id' => $c1,
-                'vendedor_id' => $v1,
-                'lotificacion_id' => $lot1,
+            $modBoletas = DB::table('modulos')->insertGetId([
+                'nombre' => 'Boletas de Pago',
+                'ruta' => '/boletas',
+                'icono' => 'fa-file-invoice-dollar',
+                'parent_id' => null,
+                'es_menu' => true,
+                'orden' => 30,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $modProveedores = DB::table('modulos')->insertGetId([
+                'nombre' => 'Proveedores',
+                'ruta' => '/proveedores',
+                'icono' => 'fa-truck-field',
+                'parent_id' => null,
+                'es_menu' => true,
+                'orden' => 40,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $modPagosProv = DB::table('modulos')->insertGetId([
+                'nombre' => 'Pagos a Proveedor',
+                'ruta' => '/pagos-proveedor',
+                'icono' => 'fa-money-check-dollar',
+                'parent_id' => $modProveedores,
+                'es_menu' => true,
+                'orden' => 41,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $allModules = [$modCatalogos, $modClientes, $modVendedores, $modLotificaciones, $modBoletas, $modProveedores, $modPagosProv];
+
+            // ADMIN -> todos
+            foreach ($allModules as $mid) {
+                DB::table('roles_modulos')->insert([
+                    'role_id' => $roleAdminId,
+                    'modulo_id' => $mid,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // VENTAS -> clientes, vendedores, lotificaciones, boletas
+            foreach ([$modClientes, $modVendedores, $modLotificaciones, $modBoletas] as $mid) {
+                DB::table('roles_modulos')->insert([
+                    'role_id' => $roleVentasId,
+                    'modulo_id' => $mid,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // COBRANZA -> boletas
+            DB::table('roles_modulos')->insert([
+                'role_id' => $roleCobranzaId,
+                'modulo_id' => $modBoletas,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // ---------------------------------------------------------
+            // 5) Permisos por USUARIO por módulo (ejemplo)
+            // ---------------------------------------------------------
+            foreach ($allModules as $mid) {
+                DB::table('usuarios_acciones_modulo')->insert([
+                    'usuario_id' => $adminUserId,
+                    'modulo_id' => $mid,
+                    'puede_ver' => true,
+                    'puede_crear' => true,
+                    'puede_modificar' => true,
+                    'puede_baja' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // VENTAS: puede crear/modificar, baja solo boletas si quieres (aquí lo dejo false)
+            foreach ([$modClientes, $modVendedores, $modLotificaciones, $modBoletas] as $mid) {
+                DB::table('usuarios_acciones_modulo')->insert([
+                    'usuario_id' => $ventasUserId,
+                    'modulo_id' => $mid,
+                    'puede_ver' => true,
+                    'puede_crear' => true,
+                    'puede_modificar' => true,
+                    'puede_baja' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // COBRANZA: puede crear partidas, modificar, no baja
+            DB::table('usuarios_acciones_modulo')->insert([
+                'usuario_id' => $cobranzaUserId,
+                'modulo_id' => $modBoletas,
+                'puede_ver' => true,
+                'puede_crear' => true,
+                'puede_modificar' => true,
+                'puede_baja' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // ---------------------------------------------------------
+            // 6) Variables globales (catálogos en JSON)
+            // ---------------------------------------------------------
+            DB::table('variables_globales')->insert([
+                'nombre' => 'catalogos_estados_mx',
+                'valor' => json_encode([
+                    'estados' => [
+                        ['clave' => 'PUE', 'nombre' => 'Puebla'],
+                        ['clave' => 'CDMX', 'nombre' => 'Ciudad de México'],
+                        ['clave' => 'JAL', 'nombre' => 'Jalisco'],
+                    ],
+                ]),
+                'descripcion' => 'Catálogo de estados (ejemplo)',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+                'baja_by' => null,
+                'baja_at' => null,
+                'baja_motivo' => null,
+            ]);
+
+            DB::table('variables_globales')->insert([
+                'nombre' => 'catalogo_puestos_empleado',
+                'valor' => json_encode([
+                    'puestos' => [
+                        'GERENTE',
+                        'ADMINISTRACION',
+                        'VENTAS',
+                        'COBRANZA',
+                        'AUXILIAR_ADMIN',
+                        'CONTABILIDAD',
+                        'SISTEMAS',
+                        'SUPERVISOR',
+                        'OTRO',
+                    ],
+                ]),
+                'descripcion' => 'Puestos para empleados (refuerzo UI)',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            // ---------------------------------------------------------
+            // 7) Socios + Lotificación + N a N + Lotes
+            // ---------------------------------------------------------
+            $socio1 = DB::table('socios')->insertGetId([
+                'nombre' => 'Socio Norte',
+                'color' => '#52BF04',
+                'telefono' => '2221112233',
+                'email' => 'socio.norte@demo.local',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $socio2 = DB::table('socios')->insertGetId([
+                'nombre' => 'Socio Sur',
+                'color' => '#F24405',
+                'telefono' => '2224445566',
+                'email' => 'socio.sur@demo.local',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $lotificacionId = DB::table('lotificaciones')->insertGetId([
+                'nombre' => 'Residencial Demo',
+                'json_croquis' => json_encode([
+                    'version' => 1,
+                    'shapes' => [
+                        ['type' => 'lot', 'clave' => 'MZ-1 LT-1', 'x' => 10, 'y' => 10],
+                        ['type' => 'lot', 'clave' => 'MZ-1 LT-2', 'x' => 60, 'y' => 10],
+                    ],
+                ]),
+                'numero_lotes' => 10,
+                'oficina' => 'Oficina Central',
+                'estado' => 'Puebla',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            DB::table('lotificacion_socios')->insert([
+                [
+                    'lotificacion_id' => $lotificacionId,
+                    'socio_id' => $socio1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'lotificacion_id' => $lotificacionId,
+                    'socio_id' => $socio2,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            $lote1 = DB::table('lotes')->insertGetId([
+                'lotificacion_id' => $lotificacionId,
+                'clave_lote' => 'MZ-1 LT-1',
+                'manzana' => '1',
+                'numero' => '1',
+                'estado' => 'LIBRE',
+                'costo_contado' => 150000,
+                'costo_credito' => 180000,
+                'notas' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $lote2 = DB::table('lotes')->insertGetId([
+                'lotificacion_id' => $lotificacionId,
+                'clave_lote' => 'MZ-1 LT-2',
+                'manzana' => '1',
+                'numero' => '2',
+                'estado' => 'LIBRE',
+                'costo_contado' => 160000,
+                'costo_credito' => 190000,
+                'notas' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            // ---------------------------------------------------------
+            // 8) Cliente (persona + cliente)
+            // ---------------------------------------------------------
+            $personaClienteId = DB::table('personas')->insertGetId([
+                'nombres' => 'Luis',
+                'apellido_paterno' => 'Pérez',
+                'apellido_materno' => 'Gómez',
+                'fecha_nacimiento' => '1989-02-10',
+                'notas' => 'Cliente demo',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            DB::table('persona_telefonos')->insert([
+                'persona_id' => $personaClienteId,
+                'etiqueta' => 'principal',
+                'telefono' => '2225556677',
+                'extension' => null,
+                'es_principal' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $clienteId = DB::table('clientes')->insertGetId([
+                'persona_id' => $personaClienteId,
+                'rfc' => 'PEGF890210AA1',
+                'tipo_cliente' => 'general',
+                'notas' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            // ---------------------------------------------------------
+            // 9) Vendedor (persona + vendedor)
+            // ---------------------------------------------------------
+            $personaVendedorId = DB::table('personas')->insertGetId([
+                'nombres' => 'María',
+                'apellido_paterno' => 'Vendedora',
+                'apellido_materno' => 'Demo',
+                'fecha_nacimiento' => null,
+                'notas' => 'Vendedor demo',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $vendedorId = DB::table('vendedores')->insertGetId([
+                'persona_id' => $personaVendedorId,
+                'comision_default' => 5000,
+                'clave' => 'VEND-001',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            // ---------------------------------------------------------
+            // 10) Empleado (persona + empleado) - ejemplo
+            // ---------------------------------------------------------
+            $personaEmpId = DB::table('personas')->insertGetId([
+                'nombres' => 'Sofía',
+                'apellido_paterno' => 'Auxiliar',
+                'apellido_materno' => 'Demo',
+                'fecha_nacimiento' => null,
+                'notas' => 'Empleado/operador demo',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            DB::table('empleados')->insert([
+                'persona_id' => $personaEmpId,
+                'puesto' => 'AUXILIAR_ADMIN',
+                'puesto_detalle' => 'Auxiliar de contratos',
+                'numero_empleado' => 'EMP-0001',
+                'observaciones' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            // ---------------------------------------------------------
+            // 11) Boleta + Partidas (venta de lote)
+            // ---------------------------------------------------------
+            $folioBoleta = 'BOL-' . str_pad((string)random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+
+            $boletaId = DB::table('boletas_pago')->insertGetId([
+                'folio' => $folioBoleta,
+                'cliente_id' => $clienteId,
+                'vendedor_id' => $vendedorId,
+                'lotificacion_id' => $lotificacionId,
                 'socio_id' => $socio1,
-                'lote_id' => $loteA1,
-                'oficina' => 'Oficina Centro',
-                'fecha_contrato' => now()->toDateString(),
+                'lote_id' => $lote1,
+                'oficina' => 'Oficina Central',
+                'fecha_contrato' => Carbon::now()->subDays(10)->toDateString(),
                 'tipo_venta' => 'CREDITO',
-                'costo_contado' => 120000,
-                'costo_credito' => 150000,
-                'enganche' => 15000,
+                'costo_contado' => 150000,
+                'costo_credito' => 180000,
+                'enganche' => 20000,
                 'comision_vendedor' => 5000,
-                'meses' => 12,
-                'observaciones' => 'Boleta demo crédito',
-                'created_by' => $uVentas,
-                'updated_by' => $uVentas,
-                'baja_by' => null,
+                'meses' => 20,
+                'observaciones' => 'Boleta demo crédito 20 meses',
+                'created_by' => $ventasUserId,
+                'updated_by' => $ventasUserId,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
             ]);
 
-            // Marca lote como OCUPADO por venta (opcional demo)
-            DB::table('lotes')->where('id', $loteA1)->update(['estado' => 'OCUPADO', 'updated_at' => now()]);
-
-            // Partidas boleta1
-            $this->insertPartida($boleta1, 'P-001', now()->subDays(10)->toDateString(), 15000, false, 0, 'ENGANCHE', 'Enganche', $uCobranza);
-            $this->insertPartida($boleta1, 'P-002', now()->subDays(3)->toDateString(), 5000, false, 0, 'ABONO', 'Abono 1', $uCobranza);
-            $this->insertPartida($boleta1, 'P-003', now()->subDays(1)->toDateString(), 5000, true, 250, 'ABONO', 'Abono 2 con recargo', $uCobranza);
-
-            // Boleta contado
-            $folio2 = 'BOL-' . now()->format('Ymd') . '-002';
-            $boleta2 = $this->insertBoletaPago([
-                'folio' => $folio2,
-                'cliente_id' => $c2,
-                'vendedor_id' => $v2,
-                'lotificacion_id' => $lot2,
-                'socio_id' => $socio1,
-                'lote_id' => $loteB1,
-                'oficina' => 'Oficina Norte',
-                'fecha_contrato' => now()->subDays(15)->toDateString(),
-                'tipo_venta' => 'CONTADO',
-                'costo_contado' => 98000,
-                'costo_credito' => 0,
-                'enganche' => 98000,
-                'comision_vendedor' => 6000,
-                'meses' => 0,
-                'observaciones' => 'Boleta demo contado',
-                'created_by' => $uVentas,
-                'updated_by' => $uVentas,
-                'baja_by' => null,
+            // Partidas
+            DB::table('boletas_partidas')->insert([
+                [
+                    'boleta_id' => $boletaId,
+                    'folio_partida' => $folioBoleta . '-P1',
+                    'fecha_pago' => Carbon::now()->subDays(9)->toDateString(),
+                    'monto' => 20000,
+                    'recargo' => false,
+                    'monto_recargo' => 0,
+                    'tipo_pago' => 'ENGANCHE',
+                    'observacion' => 'Enganche',
+                    'usuario_registro_id' => $cobranzaUserId,
+                    'usuario_modifico_id' => null,
+                    'usuario_baja_id' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+                [
+                    'boleta_id' => $boletaId,
+                    'folio_partida' => $folioBoleta . '-P2',
+                    'fecha_pago' => Carbon::now()->subDays(1)->toDateString(),
+                    'monto' => 8000,
+                    'recargo' => true,
+                    'monto_recargo' => 200,
+                    'tipo_pago' => 'ABONO',
+                    'observacion' => 'Abono mensual + recargo',
+                    'usuario_registro_id' => $cobranzaUserId,
+                    'usuario_modifico_id' => null,
+                    'usuario_baja_id' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
             ]);
 
-            DB::table('lotes')->where('id', $loteB1)->update(['estado' => 'OCUPADO', 'updated_at' => now()]);
-            $this->insertPartida($boleta2, 'P-001', now()->subDays(15)->toDateString(), 98000, false, 0, 'ENGANCHE', 'Pago contado', $uCobranza);
+            // ---------------------------------------------------------
+            // 12) Proveedor + Pago proveedor + partidas
+            // ---------------------------------------------------------
+            $personaProvId = DB::table('personas')->insertGetId([
+                'nombres' => 'Proveedora',
+                'apellido_paterno' => 'Materiales',
+                'apellido_materno' => 'SA',
+                'fecha_nacimiento' => null,
+                'notas' => 'Proveedor demo',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
 
-            // =========================
-            // 10) SOLICITUDES (demo)
-            // =========================
-            $this->insertSolicitud([
+            DB::table('persona_correos')->insert([
+                'persona_id' => $personaProvId,
+                'etiqueta' => 'facturacion',
+                'correo' => 'facturacion@proveedor.demo',
+                'es_principal' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $proveedorId = DB::table('proveedores')->insertGetId([
+                'persona_id' => $personaProvId,
+                'rfc' => 'XAXX010101000',
+                'razon_social' => 'Materiales Demo SA de CV',
+                'notas' => 'Proveedor de materiales',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            $folioPagoProv = 'PP-' . Str::upper(Str::random(8));
+
+            $pagoProvId = DB::table('pago_proveedor')->insertGetId([
+                'folio' => $folioPagoProv,
+                'proveedor_id' => $proveedorId,
+                'fecha_documento' => Carbon::now()->subDays(5)->toDateString(),
+                'fecha_registro' => now(),
+                'concepto' => 'Compra de material',
+                'referencia' => 'FAC-000123',
+                'monto_total' => 25000,
+                'observaciones' => 'Pago en 2 exhibiciones',
+                'created_by' => $adminUserId,
+                'updated_by' => $adminUserId,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
+            ]);
+
+            DB::table('pago_proveedor_partidas')->insert([
+                [
+                    'pago_proveedor_id' => $pagoProvId,
+                    'folio_partida' => $folioPagoProv . '-1',
+                    'fecha_pago' => Carbon::now()->subDays(4)->toDateString(),
+                    'forma_pago' => 'TRANSFERENCIA',
+                    'tipo_partida' => 'ANTICIPO',
+                    'monto' => 10000,
+                    'referencia_pago' => 'TRX-001122',
+                    'observacion' => 'Anticipo',
+                    'usuario_registro_id' => $adminUserId,
+                    'usuario_modifico_id' => null,
+                    'usuario_baja_id' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+                [
+                    'pago_proveedor_id' => $pagoProvId,
+                    'folio_partida' => $folioPagoProv . '-2',
+                    'fecha_pago' => Carbon::now()->subDays(1)->toDateString(),
+                    'forma_pago' => 'TRANSFERENCIA',
+                    'tipo_partida' => 'ABONO',
+                    'monto' => 15000,
+                    'referencia_pago' => 'TRX-003344',
+                    'observacion' => 'Liquidación',
+                    'usuario_registro_id' => $adminUserId,
+                    'usuario_modifico_id' => null,
+                    'usuario_baja_id' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'baja' => false,
+                ],
+            ]);
+
+            // ---------------------------------------------------------
+            // 13) Solicitud demo (aprobación para baja/modificación)
+            // ---------------------------------------------------------
+            DB::table('solicitudes')->insert([
                 'tipo' => 'MODIFICACION',
                 'estatus' => 'PENDIENTE',
-                'modulo_id' => $mBoletas,
+                'modulo_id' => $modBoletas,
                 'tabla_objetivo' => 'boletas_pago',
-                'registro_id' => $boleta1,
-                'motivo' => 'Cambiar observación del contrato',
-                'payload' => [
-                    'observaciones' => 'Nueva observación solicitada'
-                ],
-                'solicitado_por' => $uVentas,
+                'registro_id' => $boletaId,
+                'motivo' => 'Actualizar observaciones de boleta',
+                'payload' => json_encode([
+                    'before' => ['observaciones' => 'Boleta demo crédito 20 meses'],
+                    'after' => ['observaciones' => 'Boleta demo (cambio solicitado)'],
+                ]),
+                'solicitado_por' => $ventasUserId,
+                'solicitado_at' => now(),
                 'revisado_por' => null,
+                'revisado_at' => null,
                 'decision_motivo' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'baja' => false,
             ]);
 
-            // =========================
-            // 11) AUDITORÍA (acciones_usuario_historial) demo
-            // =========================
-            if ($this->tableExists('acciones_usuario_historial')) {
-                $this->insertAudit($uAdmin, $mUsuarios, 'CREAR', 'usuarios', $uAdmin, null, ['seed' => true, 'nota' => 'Creación usuario admin']);
-                $this->insertAudit($uVentas, $mBoletas, 'CREAR', 'boletas_pago', $boleta1, null, ['folio' => $folio1]);
-                $this->insertAudit($uCobranza, $mPartidas, 'CREAR', 'boletas_partidas', null, null, ['boleta_id' => $boleta1, 'folio_partida' => 'P-001']);
+        });
+    }
+}
+/*
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        DB::transaction(function () {
+
+            $now = now();
+
+            // =========================================================
+            // Helpers
+            // =========================================================
+            $insertPersona = function(array $p) use ($now) {
+                return DB::table('personas')->insertGetId([
+                    'nombres' => $p['nombres'],
+                    'apellido_paterno' => $p['apellido_paterno'],
+                    'apellido_materno' => $p['apellido_materno'] ?? null,
+                    'fecha_nacimiento' => $p['fecha_nacimiento'] ?? null,
+                    'notas' => $p['notas'] ?? null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            $upsertVar = function(string $nombre, array $valor, string $descripcion = null) use ($now) {
+                $existing = DB::table('variables_globales')->where('nombre', $nombre)->first();
+                if ($existing) {
+                    DB::table('variables_globales')->where('id', $existing->id)->update([
+                        'valor' => json_encode($valor),
+                        'descripcion' => $descripcion,
+                        'updated_at' => $now,
+                        'baja' => false,
+                        'baja_at' => null,
+                        'baja_by' => null,
+                        'baja_motivo' => null,
+                    ]);
+                    return $existing->id;
+                }
+
+                return DB::table('variables_globales')->insertGetId([
+                    'nombre' => $nombre,
+                    'valor' => json_encode($valor),
+                    'descripcion' => $descripcion,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            $nextConsecutivo = function(string $varName) use ($now) {
+                $row = DB::table('variables_globales')->where('nombre', $varName)->lockForUpdate()->first();
+                if (!$row) throw new \RuntimeException("Falta variable_global: {$varName}");
+
+                $v = is_string($row->valor) ? json_decode($row->valor, true) : (array)$row->valor;
+
+                $prefix = (string)($v['prefix'] ?? '');
+                $next   = (int)($v['next'] ?? 1);
+                $pad    = (int)($v['pad'] ?? 4);
+
+                $folio = $prefix . str_pad((string)$next, $pad, '0', STR_PAD_LEFT);
+
+                DB::table('variables_globales')->where('id', $row->id)->update([
+                    'valor' => json_encode(['prefix' => $prefix, 'next' => $next + 1, 'pad' => $pad]),
+                    'updated_at' => $now,
+                ]);
+
+                return $folio;
+            };
+
+            $addTel = function(int $personaId, string $tel, string $label='principal', bool $principal=false) use ($now) {
+                DB::table('persona_telefonos')->insert([
+                    'persona_id' => $personaId,
+                    'etiqueta' => $label,
+                    'telefono' => $tel,
+                    'extension' => null,
+                    'es_principal' => $principal,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                    'baja_by' => null,
+                ]);
+            };
+
+            $addMail = function(int $personaId, string $mail, string $label='principal', bool $principal=false) use ($now) {
+                DB::table('persona_correos')->insert([
+                    'persona_id' => $personaId,
+                    'etiqueta' => $label,
+                    'correo' => $mail,
+                    'es_principal' => $principal,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                    'baja_by' => null,
+                ]);
+            };
+
+            $addDir = function(int $personaId, array $d, string $label='principal', bool $principal=false) use ($now) {
+                DB::table('persona_direcciones')->insert([
+                    'persona_id' => $personaId,
+                    'etiqueta' => $label,
+                    'calle' => $d['calle'] ?? null,
+                    'numero_ext' => $d['numero_ext'] ?? null,
+                    'numero_int' => $d['numero_int'] ?? null,
+                    'colonia' => $d['colonia'] ?? null,
+                    'municipio' => $d['municipio'] ?? null,
+                    'estado' => $d['estado'] ?? null,
+                    'cp' => $d['cp'] ?? null,
+                    'referencias' => $d['referencias'] ?? null,
+                    'es_principal' => $principal,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                    'baja_by' => null,
+                ]);
+            };
+
+            $insertModulo = function(array $m) use ($now) {
+                return DB::table('modulos')->insertGetId([
+                    'nombre' => $m['nombre'],
+                    'ruta' => $m['ruta'] ?? null,
+                    'icono' => $m['icono'] ?? null,
+                    'parent_id' => $m['parent_id'] ?? null,
+                    'es_menu' => $m['es_menu'] ?? true,
+                    'orden' => $m['orden'] ?? 0,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            // =========================================================
+            // 1) ROLES
+            // =========================================================
+            $roleAdmin = DB::table('roles')->insertGetId([
+                'nombre' => 'ADMIN',
+                'descripcion' => 'Acceso total',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            $roleGerente = DB::table('roles')->insertGetId([
+                'nombre' => 'GERENTE',
+                'descripcion' => 'Gerencia',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            $roleCobranza = DB::table('roles')->insertGetId([
+                'nombre' => 'COBRANZA',
+                'descripcion' => 'Cobranza',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            $roleAux = DB::table('roles')->insertGetId([
+                'nombre' => 'AUXILIAR',
+                'descripcion' => 'Operación',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            // =========================================================
+            // 2) VARIABLES GLOBALES (consecutivos)
+            // =========================================================
+            $upsertVar('empleados_consecutivo', [
+                'prefix' => 'EMP-',
+                'next' => 1,
+                'pad' => 5
+            ], 'Folio autogenerado para empleados.numero_empleado');
+
+            $upsertVar('vendedores_clave_consecutivo', [
+                'prefix' => '',
+                'next' => 1,
+                'pad' => 4
+            ], 'Clave de vendedor 0001, 0002... (complemento de empleado VENTAS)');
+
+            $upsertVar('boletas_pago_folio', [
+                'prefix' => 'BP-',
+                'next' => 1,
+                'pad' => 6
+            ], 'Folio de boletas_pago');
+
+            $upsertVar('boletas_partidas_folio', [
+                'prefix' => 'BPP-',
+                'next' => 1,
+                'pad' => 7
+            ], 'Folio de boletas_partidas');
+
+            // =========================================================
+            // 3) EMPLEADOS (con contactos) + (si VENTAS => vendedores)
+            // =========================================================
+            $mkEmpleado = function(array $data) use ($now, $insertPersona, $nextConsecutivo) {
+                $personaId = $insertPersona($data['persona']);
+
+                $empId = DB::table('empleados')->insertGetId([
+                    'persona_id' => $personaId,
+                    'puesto' => $data['empleado']['puesto'] ?? 'OTRO',
+                    'puesto_detalle' => $data['empleado']['puesto_detalle'] ?? null,
+                    'numero_empleado' => $nextConsecutivo('empleados_consecutivo'),
+                    'observaciones' => $data['empleado']['observaciones'] ?? null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+
+                return [$personaId, $empId];
+            };
+
+            // Admin empleado
+            [$pAdmin, $empAdmin] = $mkEmpleado([
+                'persona' => [
+                    'nombres' => 'Hugo',
+                    'apellido_paterno' => 'Admin',
+                    'apellido_materno' => 'System',
+                    'fecha_nacimiento' => '1999-01-01',
+                    'notas' => 'Seed Admin',
+                ],
+                'empleado' => [
+                    'puesto' => 'SISTEMAS',
+                    'puesto_detalle' => 'Administrador',
+                    'observaciones' => 'Empleado base admin',
+                ]
+            ]);
+
+            // Contactos múltiples empleado admin
+            $addTel($pAdmin, '999-111-2233', 'principal', true);
+            $addTel($pAdmin, '999-222-3344', 'oficina', false);
+            $addMail($pAdmin, 'admin@demo.com', 'principal', true);
+            $addMail($pAdmin, 'admin.soporte@demo.com', 'soporte', false);
+            $addDir($pAdmin, [
+                'calle' => 'Av. Central',
+                'numero_ext' => '123',
+                'colonia' => 'Centro',
+                'municipio' => 'Tuxtla',
+                'estado' => 'Chiapas',
+                'cp' => '29000',
+                'referencias' => 'Frente al parque'
+            ], 'principal', true);
+
+            // Gerente
+            [$pGer, $empGer] = $mkEmpleado([
+                'persona' => [
+                    'nombres' => 'Laura',
+                    'apellido_paterno' => 'Gomez',
+                    'apellido_materno' => 'Rios',
+                    'fecha_nacimiento' => '1995-05-10',
+                    'notas' => 'Gerente',
+                ],
+                'empleado' => [
+                    'puesto' => 'GERENTE',
+                    'puesto_detalle' => 'Gerencia',
+                ]
+            ]);
+            $addTel($pGer, '961-555-1000', 'principal', true);
+            $addMail($pGer, 'gerente@demo.com', 'principal', true);
+
+            // Cobranza
+            [$pCob, $empCob] = $mkEmpleado([
+                'persona' => [
+                    'nombres' => 'Carlos',
+                    'apellido_paterno' => 'Lopez',
+                    'apellido_materno' => 'Soto',
+                    'fecha_nacimiento' => '1992-11-22',
+                    'notas' => 'Cobranza',
+                ],
+                'empleado' => [
+                    'puesto' => 'COBRANZA',
+                    'puesto_detalle' => 'Cobrador',
+                ]
+            ]);
+            $addTel($pCob, '961-555-2000', 'principal', true);
+            $addMail($pCob, 'cobranza@demo.com', 'principal', true);
+
+            // Auxiliar
+            [$pAux, $empAux] = $mkEmpleado([
+                'persona' => [
+                    'nombres' => 'Martha',
+                    'apellido_paterno' => 'Perez',
+                    'apellido_materno' => 'Diaz',
+                    'fecha_nacimiento' => '1998-02-14',
+                    'notas' => 'Auxiliar',
+                ],
+                'empleado' => [
+                    'puesto' => 'AUXILIAR_ADMIN',
+                ]
+            ]);
+            $addTel($pAux, '961-555-3000', 'principal', true);
+            $addMail($pAux, 'aux@demo.com', 'principal', true);
+
+            // Empleado VENTAS (se crea complemento en vendedores)
+            [$pVend, $empVend] = $mkEmpleado([
+                'persona' => [
+                    'nombres' => 'Raul',
+                    'apellido_paterno' => 'Vega',
+                    'apellido_materno' => 'Nava',
+                    'fecha_nacimiento' => '1990-09-09',
+                    'notas' => 'Empleado ventas',
+                ],
+                'empleado' => [
+                    'puesto' => 'VENTAS',
+                    'puesto_detalle' => 'Vendedor',
+                    'observaciones' => 'Debe crear complemento en vendedores',
+                ]
+            ]);
+            $addTel($pVend, '961-555-4000', 'principal', true);
+            $addMail($pVend, 'ventas@demo.com', 'principal', true);
+
+            // Complemento vendedor (puesto VENTAS)
+            $vendId = DB::table('vendedores')->insertGetId([
+                'empleado_id' => $empVend,
+                'comision_default' => 5.00,
+                'clave' => $nextConsecutivo('vendedores_clave_consecutivo'), // 0001...
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            // =========================================================
+            // 4) USUARIOS (depende de EMPLEADO ya creado)
+            // =========================================================
+            $userAdmin = DB::table('usuarios')->insertGetId([
+                'empleado_id' => $empAdmin,
+                'role_id' => $roleAdmin,
+                'email' => 'admin@demo.com',
+                'username' => 'admin',
+                'password_hash' => Hash::make('Admin123*'),
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            $userGer = DB::table('usuarios')->insertGetId([
+                'empleado_id' => $empGer,
+                'role_id' => $roleGerente,
+                'email' => 'gerente@demo.com',
+                'username' => 'gerente',
+                'password_hash' => Hash::make('Gerente123*'),
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            $userCob = DB::table('usuarios')->insertGetId([
+                'empleado_id' => $empCob,
+                'role_id' => $roleCobranza,
+                'email' => 'cobranza@demo.com',
+                'username' => 'cobranza',
+                'password_hash' => Hash::make('Cobranza123*'),
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            $userAux = DB::table('usuarios')->insertGetId([
+                'empleado_id' => $empAux,
+                'role_id' => $roleAux,
+                'email' => 'aux@demo.com',
+                'username' => 'aux',
+                'password_hash' => Hash::make('Aux123*'),
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            $userVend = DB::table('usuarios')->insertGetId([
+                'empleado_id' => $empVend,
+                'role_id' => $roleAux,
+                'email' => 'ventas@demo.com',
+                'username' => 'ventas',
+                'password_hash' => Hash::make('Ventas123*'),
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            // =========================================================
+            // 5) MODULOS (Drawer SIN “Vendedores”)
+            // =========================================================
+            $mDashboard = $insertModulo([
+                'nombre' => 'Dashboard',
+                'ruta' => '/dashboard',
+                'icono' => 'fa-gauge-high',
+                'orden' => 1,
+                'es_menu' => true
+            ]);
+
+            $mCatalogos = $insertModulo([
+                'nombre' => 'Catálogos',
+                'ruta' => null,
+                'icono' => 'fa-list',
+                'orden' => 2,
+                'es_menu' => true
+            ]);
+
+            $mEmpleados = $insertModulo([
+                'nombre' => 'Empleados',
+                'ruta' => '/empleados',
+                'icono' => 'fa-id-card',
+                'parent_id' => $mCatalogos,
+                'orden' => 1,
+                'es_menu' => true
+            ]);
+
+            $mClientes = $insertModulo([
+                'nombre' => 'Clientes',
+                'ruta' => '/clientes',
+                'icono' => 'fa-users',
+                'parent_id' => $mCatalogos,
+                'orden' => 2,
+                'es_menu' => true
+            ]);
+
+            $mSocios = $insertModulo([
+                'nombre' => 'Socios',
+                'ruta' => '/socios',
+                'icono' => 'fa-handshake',
+                'parent_id' => $mCatalogos,
+                'orden' => 3,
+                'es_menu' => true
+            ]);
+
+            $mLotificaciones = $insertModulo([
+                'nombre' => 'Lotificaciones',
+                'ruta' => '/lotificaciones',
+                'icono' => 'fa-map',
+                'parent_id' => $mCatalogos,
+                'orden' => 4,
+                'es_menu' => true
+            ]);
+
+            $mOperacion = $insertModulo([
+                'nombre' => 'Operación',
+                'ruta' => null,
+                'icono' => 'fa-layer-group',
+                'orden' => 3,
+                'es_menu' => true
+            ]);
+
+            $mBoletas = $insertModulo([
+                'nombre' => 'Boletas de Pago',
+                'ruta' => '/boletas',
+                'icono' => 'fa-file-invoice-dollar',
+                'parent_id' => $mOperacion,
+                'orden' => 1,
+                'es_menu' => true
+            ]);
+
+            $mSolicitudes = $insertModulo([
+                'nombre' => 'Autorizaciones',
+                'ruta' => '/autorizaciones',
+                'icono' => 'fa-clipboard-check',
+                'parent_id' => $mOperacion,
+                'orden' => 2,
+                'es_menu' => true
+            ]);
+
+            $mSeguridad = $insertModulo([
+                'nombre' => 'Seguridad',
+                'ruta' => null,
+                'icono' => 'fa-shield-halved',
+                'orden' => 4,
+                'es_menu' => true
+            ]);
+
+            $mUsuarios = $insertModulo([
+                'nombre' => 'Usuarios',
+                'ruta' => '/usuarios',
+                'icono' => 'fa-user-shield',
+                'parent_id' => $mSeguridad,
+                'orden' => 1,
+                'es_menu' => true
+            ]);
+
+            $mRoles = $insertModulo([
+                'nombre' => 'Roles',
+                'ruta' => '/roles',
+                'icono' => 'fa-id-badge',
+                'parent_id' => $mSeguridad,
+                'orden' => 2,
+                'es_menu' => true
+            ]);
+
+            $mModulos = $insertModulo([
+                'nombre' => 'Módulos',
+                'ruta' => '/modulos',
+                'icono' => 'fa-sitemap',
+                'parent_id' => $mSeguridad,
+                'orden' => 3,
+                'es_menu' => true
+            ]);
+
+            $mAuditoria = $insertModulo([
+                'nombre' => 'Auditoría',
+                'ruta' => '/auditoria',
+                'icono' => 'fa-clock-rotate-left',
+                'parent_id' => $mSeguridad,
+                'orden' => 4,
+                'es_menu' => true
+            ]);
+
+            // roles_modulos (drawer por rol)
+            $grantRole = function($roleId, array $moduloIds) use ($now) {
+                foreach ($moduloIds as $mid) {
+                    DB::table('roles_modulos')->insert([
+                        'role_id' => $roleId,
+                        'modulo_id' => $mid,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
+            };
+
+            // Admin ve todo
+            $grantRole($roleAdmin, [
+                $mDashboard,
+                $mCatalogos, $mEmpleados, $mClientes, $mSocios, $mLotificaciones,
+                $mOperacion, $mBoletas, $mSolicitudes,
+                $mSeguridad, $mUsuarios, $mRoles, $mModulos, $mAuditoria
+            ]);
+
+            // Gerente
+            $grantRole($roleGerente, [
+                $mDashboard,
+                $mCatalogos, $mEmpleados, $mClientes, $mSocios, $mLotificaciones,
+                $mOperacion, $mBoletas, $mSolicitudes,
+                $mSeguridad, $mUsuarios, $mRoles, $mAuditoria
+            ]);
+
+            // Cobranza
+            $grantRole($roleCobranza, [
+                $mDashboard,
+                $mOperacion, $mBoletas, $mSolicitudes
+            ]);
+
+            // Aux
+            $grantRole($roleAux, [
+                $mDashboard,
+                $mCatalogos, $mClientes, $mSocios,
+                $mOperacion, $mBoletas
+            ]);
+
+            // usuarios_acciones_modulo (acciones por usuario)
+            $grantUser = function($userId, array $map) use ($now) {
+                foreach ($map as $modId => $perms) {
+                    DB::table('usuarios_acciones_modulo')->insert([
+                        'usuario_id' => $userId,
+                        'modulo_id' => $modId,
+                        'puede_ver' => (bool)($perms['ver'] ?? true),
+                        'puede_crear' => (bool)($perms['crear'] ?? false),
+                        'puede_modificar' => (bool)($perms['modificar'] ?? false),
+                        'puede_baja' => (bool)($perms['baja'] ?? false),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
+            };
+
+            // Admin full
+            $grantUser($userAdmin, [
+                $mDashboard => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mEmpleados => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mUsuarios  => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mClientes  => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mSocios    => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mLotificaciones => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mBoletas   => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mSolicitudes => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mRoles     => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mModulos   => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>true],
+                $mAuditoria => ['ver'=>true,'crear'=>false,'modificar'=>false,'baja'=>false],
+            ]);
+
+            // Gerente
+            $grantUser($userGer, [
+                $mDashboard => ['ver'=>true],
+                $mEmpleados => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mUsuarios  => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mClientes => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mSocios => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mLotificaciones => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mBoletas => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mSolicitudes => ['ver'=>true,'crear'=>true,'modificar'=>false,'baja'=>false],
+                $mRoles => ['ver'=>true],
+                $mAuditoria => ['ver'=>true],
+            ]);
+
+            // Cobranza
+            $grantUser($userCob, [
+                $mDashboard => ['ver'=>true],
+                $mBoletas => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mSolicitudes => ['ver'=>true,'crear'=>true,'modificar'=>false,'baja'=>false],
+            ]);
+
+            // Aux
+            $grantUser($userAux, [
+                $mDashboard => ['ver'=>true],
+                $mClientes => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mSocios => ['ver'=>true,'crear'=>true,'modificar'=>true,'baja'=>false],
+                $mBoletas => ['ver'=>true,'crear'=>true,'modificar'=>false,'baja'=>false],
+            ]);
+
+            // Vendedor (usuario) - opera boletas y clientes
+            $grantUser($userVend, [
+                $mDashboard => ['ver'=>true],
+                $mBoletas => ['ver'=>true,'crear'=>true,'modificar'=>false,'baja'=>false],
+                $mClientes => ['ver'=>true,'crear'=>true,'modificar'=>false,'baja'=>false],
+            ]);
+
+            // =========================================================
+            // 6) CLIENTES (con contactos múltiples)
+            // =========================================================
+            $pC1 = $insertPersona([
+                'nombres' => 'Juan',
+                'apellido_paterno' => 'Hernandez',
+                'apellido_materno' => 'Mora',
+                'fecha_nacimiento' => '1988-03-15',
+                'notas' => 'Cliente 1'
+            ]);
+            $cli1 = DB::table('clientes')->insertGetId([
+                'persona_id' => $pC1,
+                'rfc' => 'HEMJ880315XXX',
+                'tipo_cliente' => 'general',
+                'notas' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            // múltiples contactos cliente 1
+            $addTel($pC1, '961-700-1000', 'principal', true);
+            $addTel($pC1, '961-700-1001', 'whatsapp', false);
+            $addMail($pC1, 'juan.cliente@demo.com', 'principal', true);
+            $addMail($pC1, 'juan.facturacion@demo.com', 'facturacion', false);
+            $addDir($pC1, [
+                'calle' => 'Calle 1',
+                'numero_ext' => '10',
+                'colonia' => 'Las Flores',
+                'municipio' => 'Tuxtla',
+                'estado' => 'Chiapas',
+                'cp' => '29020',
+                'referencias' => 'Casa azul'
+            ], 'casa', true);
+
+            $pC2 = $insertPersona([
+                'nombres' => 'Ana',
+                'apellido_paterno' => 'Sanchez',
+                'apellido_materno' => 'Loera',
+                'fecha_nacimiento' => '1991-07-20',
+                'notas' => 'Cliente 2'
+            ]);
+            $cli2 = DB::table('clientes')->insertGetId([
+                'persona_id' => $pC2,
+                'rfc' => 'SALA910720XXX',
+                'tipo_cliente' => 'general',
+                'notas' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            // múltiples contactos cliente 2
+            $addTel($pC2, '961-700-2000', 'principal', true);
+            $addMail($pC2, 'ana.cliente@demo.com', 'principal', true);
+            $addDir($pC2, [
+                'calle' => 'Calle 2',
+                'numero_ext' => '22',
+                'colonia' => 'Lomas',
+                'municipio' => 'Tuxtla',
+                'estado' => 'Chiapas',
+                'cp' => '29010',
+                'referencias' => 'Departamento 3'
+            ], 'casa', true);
+
+            // =========================================================
+            // 7) SOCIOS / LOTIFICACIONES / LOTES
+            // =========================================================
+            $socio1 = DB::table('socios')->insertGetId([
+                'nombre' => 'Socio Azul',
+                'color' => '#2D6CDF',
+                'telefono' => '961-100-1000',
+                'email' => 'socio.azul@demo.com',
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            $socio2 = DB::table('socios')->insertGetId([
+                'nombre' => 'Socio Rojo',
+                'color' => '#D9042B',
+                'telefono' => '961-200-2000',
+                'email' => 'socio.rojo@demo.com',
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false
+            ]);
+
+            $lot1 = DB::table('lotificaciones')->insertGetId([
+                'nombre' => 'Residencial Las Palmas',
+                'json_croquis' => json_encode(['demo'=>true]),
+                'numero_lotes' => 6,
+                'oficina' => 'Oficina Centro',
+                'estado' => 'Chiapas',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            $lot2 = DB::table('lotificaciones')->insertGetId([
+                'nombre' => 'Colinas del Sol',
+                'json_croquis' => json_encode(['demo'=>true]),
+                'numero_lotes' => 4,
+                'oficina' => 'Oficina Norte',
+                'estado' => 'Chiapas',
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'baja' => false,
+            ]);
+
+            DB::table('lotificacion_socios')->insert([
+                ['lotificacion_id'=>$lot1,'socio_id'=>$socio1,'created_at'=>$now,'updated_at'=>$now],
+                ['lotificacion_id'=>$lot1,'socio_id'=>$socio2,'created_at'=>$now,'updated_at'=>$now],
+                ['lotificacion_id'=>$lot2,'socio_id'=>$socio2,'created_at'=>$now,'updated_at'=>$now],
+            ]);
+
+            $mkLote = function($lotificacionId, $clave, $estado='LIBRE', $cc=150000, $cr=185000) use ($now) {
+                return DB::table('lotes')->insertGetId([
+                    'lotificacion_id' => $lotificacionId,
+                    'clave_lote' => $clave,
+                    'manzana' => 'A',
+                    'numero' => preg_replace('/\D+/', '', $clave) ?: '1',
+                    'estado' => $estado,
+                    'costo_contado' => $cc,
+                    'costo_credito' => $cr,
+                    'notas' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            $lotes = [];
+            $lotes['LP-02'] = $mkLote($lot1,'LP-02','LIBRE', 130000, 160000);
+            $lotes['CS-03'] = $mkLote($lot2,'CS-03','LIBRE', 170000, 210000);
+
+            // =========================================================
+            // 8) BOLETAS + PARTIDAS (folios por variables_globales)
+            // =========================================================
+            $mkBoleta = function(array $b) use ($now, $nextConsecutivo, $userAdmin) {
+                return DB::table('boletas_pago')->insertGetId([
+                    'folio' => $nextConsecutivo('boletas_pago_folio'),
+                    'cliente_id' => $b['cliente_id'],
+                    'vendedor_id' => $b['vendedor_id'] ?? null,
+                    'lotificacion_id' => $b['lotificacion_id'],
+                    'socio_id' => $b['socio_id'] ?? null,
+                    'lote_id' => $b['lote_id'],
+                    'oficina' => $b['oficina'] ?? null,
+                    'fecha_contrato' => $b['fecha_contrato'],
+                    'tipo_venta' => $b['tipo_venta'],
+                    'costo_contado' => $b['costo_contado'] ?? 0,
+                    'costo_credito' => $b['costo_credito'] ?? 0,
+                    'enganche' => $b['enganche'] ?? 0,
+                    'comision_vendedor' => $b['comision_vendedor'] ?? 0,
+                    'meses' => $b['meses'] ?? 0,
+                    'observaciones' => $b['observaciones'] ?? null,
+                    'created_by' => $b['created_by'] ?? $userAdmin,
+                    'updated_by' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            $mkPartida = function(array $p) use ($now, $nextConsecutivo) {
+                return DB::table('boletas_partidas')->insertGetId([
+                    'boleta_id' => $p['boleta_id'],
+                    'folio_partida' => $nextConsecutivo('boletas_partidas_folio'),
+                    'fecha_pago' => $p['fecha_pago'],
+                    'monto' => $p['monto'],
+                    'recargo' => (bool)($p['recargo'] ?? false),
+                    'monto_recargo' => $p['monto_recargo'] ?? 0,
+                    'tipo_pago' => $p['tipo_pago'] ?? 'ABONO',
+                    'observacion' => $p['observacion'] ?? null,
+                    'usuario_registro_id' => $p['usuario_registro_id'] ?? null,
+                    'usuario_modifico_id' => null,
+                    'usuario_baja_id' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ]);
+            };
+
+            // Boleta 1 (contado)
+            $b1 = $mkBoleta([
+                'cliente_id' => $cli1,
+                'vendedor_id' => $vendId, // complemento vendedor
+                'lotificacion_id' => $lot1,
+                'socio_id' => $socio1,
+                'lote_id' => $lotes['LP-02'],
+                'oficina' => 'Oficina Centro',
+                'fecha_contrato' => date('Y-m-d'),
+                'tipo_venta' => 'CONTADO',
+                'costo_contado' => 130000,
+                'enganche' => 130000,
+                'comision_vendedor' => 6500,
+                'meses' => 0,
+                'created_by' => $userVend
+            ]);
+
+            $mkPartida([
+                'boleta_id' => $b1,
+                'fecha_pago' => date('Y-m-d'),
+                'monto' => 130000,
+                'tipo_pago' => 'ENGANCHE',
+                'observacion' => 'Pago de contado',
+                'usuario_registro_id' => $userVend
+            ]);
+
+            // Boleta 2 (crédito)
+            $b2 = $mkBoleta([
+                'cliente_id' => $cli2,
+                'vendedor_id' => $vendId,
+                'lotificacion_id' => $lot2,
+                'socio_id' => $socio2,
+                'lote_id' => $lotes['CS-03'],
+                'oficina' => 'Oficina Norte',
+                'fecha_contrato' => date('Y-m-d', strtotime('-5 days')),
+                'tipo_venta' => 'CREDITO',
+                'costo_contado' => 170000,
+                'costo_credito' => 210000,
+                'enganche' => 30000,
+                'comision_vendedor' => 8500,
+                'meses' => 24,
+                'created_by' => $userAdmin
+            ]);
+
+            $mkPartida([
+                'boleta_id' => $b2,
+                'fecha_pago' => date('Y-m-d', strtotime('-5 days')),
+                'monto' => 30000,
+                'tipo_pago' => 'ENGANCHE',
+                'observacion' => 'Enganche crédito',
+                'usuario_registro_id' => $userAdmin
+            ]);
+
+            $mkPartida([
+                'boleta_id' => $b2,
+                'fecha_pago' => date('Y-m-d', strtotime('-2 days')),
+                'monto' => 5000,
+                'tipo_pago' => 'ABONO',
+                'observacion' => 'Primer abono',
+                'usuario_registro_id' => $userCob
+            ]);
+
+            // =========================================================
+            // 9) SOLICITUDES (autorizaciones)
+            // =========================================================
+            DB::table('solicitudes')->insert([
+                [
+                    'tipo' => 'MODIFICACION',
+                    'estatus' => 'PENDIENTE',
+                    'modulo_id' => $mBoletas,
+                    'tabla_objetivo' => 'boletas_pago',
+                    'registro_id' => $b2,
+                    'motivo' => 'Actualizar observaciones de contrato',
+                    'payload' => json_encode(['observaciones' => 'Cliente solicita ajuste de datos']),
+                    'solicitado_por' => $userCob,
+                    'solicitado_at' => $now,
+                    'revisado_por' => null,
+                    'revisado_at' => null,
+                    'decision_motivo' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ],
+                [
+                    'tipo' => 'BAJA',
+                    'estatus' => 'PENDIENTE',
+                    'modulo_id' => $mBoletas,
+                    'tabla_objetivo' => 'boletas_partidas',
+                    'registro_id' => 2, // demo
+                    'motivo' => 'Pago duplicado',
+                    'payload' => json_encode(['reason'=>'duplicado']),
+                    'solicitado_por' => $userCob,
+                    'solicitado_at' => $now,
+                    'revisado_por' => null,
+                    'revisado_at' => null,
+                    'decision_motivo' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'baja' => false,
+                ],
+            ]);
+
+            // =========================================================
+            // 10) AUDITORIA (acciones_usuario_historial) - DEMO
+            // =========================================================
+            if (Schema::hasTable('acciones_usuario_historial')) {
+                DB::table('acciones_usuario_historial')->insert([
+                    [
+                        'usuario_id' => $userAdmin,
+                        'modulo_id' => $mDashboard,
+                        'accion' => 'LOGIN',
+                        'tabla' => 'usuarios',
+                        'registro_id' => $userAdmin,
+                        'ip' => '127.0.0.1',
+                        'user_agent' => 'Seeder',
+                        'before_data' => null,
+                        'after_data' => json_encode(['username'=>'admin']),
+                        'created_at' => $now,
+                    ],
+                    [
+                        'usuario_id' => $userVend,
+                        'modulo_id' => $mBoletas,
+                        'accion' => 'CREAR',
+                        'tabla' => 'boletas_pago',
+                        'registro_id' => $b1,
+                        'ip' => '127.0.0.1',
+                        'user_agent' => 'Seeder',
+                        'before_data' => null,
+                        'after_data' => json_encode(['folio'=>'(autogen)']),
+                        'created_at' => $now,
+                    ],
+                ]);
             }
 
         });
     }
-
-    // ============================================================
-    // Helpers
-    // ============================================================
-
-    private function truncateAll(): void
-    {
-        // Orden con FKs (hijos -> padres)
-        $tables = [
-            'acciones_usuario_historial',
-            'solicitudes',
-            'boletas_partidas',
-            'boletas_pago',
-            'lotes',
-            'lotificacion_socios',
-            'socios',
-            'lotificaciones',
-            'variables_globales',
-            'empleados',
-            'vendedores',
-            'clientes',
-            'persona_direcciones',
-            'persona_correos',
-            'persona_telefonos',
-            'usuarios_acciones_modulo',
-            'roles_modulos',
-            'modulos',
-            'usuarios',
-            'personas',
-            'roles',
-        ];
-
-        DB::statement('SET session_replication_role = replica;'); // desactiva FKs temporalmente (Postgres)
-        foreach ($tables as $t) {
-            if ($this->tableExists($t)) {
-                DB::table($t)->truncate();
-            }
-        }
-        DB::statement('SET session_replication_role = DEFAULT;');
-    }
-
-    private function tableExists(string $name): bool
-    {
-        return DB::selectOne("SELECT to_regclass(?) as t", [$name])?->t !== null;
-    }
-
-    private function insertRole(string $nombre, ?string $descripcion): int
-    {
-        return DB::table('roles')->insertGetId([
-            'nombre' => $nombre,
-            'descripcion' => $descripcion,
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertPersona(string $nombres, string $apPat, ?string $apMat, ?string $fn, ?string $notas): int
-    {
-        return DB::table('personas')->insertGetId([
-            'nombres' => $nombres,
-            'apellido_paterno' => $apPat,
-            'apellido_materno' => $apMat,
-            'fecha_nacimiento' => $fn,
-            'notas' => $notas,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertUsuario(int $personaId, int $roleId, ?string $email, ?string $username, string $passwordPlain): int
-    {
-        return DB::table('usuarios')->insertGetId([
-            'persona_id' => $personaId,
-            'role_id' => $roleId,
-            'email' => $email,
-            'username' => $username,
-            'password_hash' => Hash::make($passwordPlain),
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertTelefono(int $personaId, string $etiqueta, string $tel, bool $principal, int $by): int
-    {
-        return DB::table('persona_telefonos')->insertGetId([
-            'persona_id' => $personaId,
-            'etiqueta' => $etiqueta,
-            'telefono' => $tel,
-            'extension' => null,
-            'es_principal' => $principal,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertCorreo(int $personaId, string $etiqueta, string $correo, bool $principal, int $by): int
-    {
-        return DB::table('persona_correos')->insertGetId([
-            'persona_id' => $personaId,
-            'etiqueta' => $etiqueta,
-            'correo' => $correo,
-            'es_principal' => $principal,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertDireccion(
-        int $personaId,
-        string $etiqueta,
-        ?string $calle,
-        ?string $ext,
-        ?string $int,
-        ?string $colonia,
-        ?string $municipio,
-        ?string $estado,
-        ?string $cp,
-        ?string $ref,
-        bool $principal,
-        int $by
-    ): int {
-        return DB::table('persona_direcciones')->insertGetId([
-            'persona_id' => $personaId,
-            'etiqueta' => $etiqueta,
-            'calle' => $calle,
-            'numero_ext' => $ext,
-            'numero_int' => $int,
-            'colonia' => $colonia,
-            'municipio' => $municipio,
-            'estado' => $estado,
-            'cp' => $cp,
-            'referencias' => $ref,
-            'es_principal' => $principal,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertModulo(string $nombre, ?string $ruta, ?string $icono, ?int $parentId, bool $esMenu, int $orden, int $by): int
-    {
-        return DB::table('modulos')->insertGetId([
-            'nombre' => $nombre,
-            'ruta' => $ruta,
-            'icono' => $icono,
-            'parent_id' => $parentId,
-            'es_menu' => $esMenu,
-            'orden' => $orden,
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function attachRoleModulo(int $roleId, int $moduloId): void
-    {
-        DB::table('roles_modulos')->insert([
-            'role_id' => $roleId,
-            'modulo_id' => $moduloId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    private function upsertUsuarioAcciones(int $usuarioId, int $moduloId, bool $ver, bool $crear, bool $mod, bool $baja): void
-    {
-        DB::table('usuarios_acciones_modulo')->updateOrInsert(
-            ['usuario_id' => $usuarioId, 'modulo_id' => $moduloId],
-            [
-                'puede_ver' => $ver,
-                'puede_crear' => $crear,
-                'puede_modificar' => $mod,
-                'puede_baja' => $baja,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-    }
-
-    private function insertCliente(int $personaId, ?string $rfc, ?string $tipo, ?string $notas, int $by): int
-    {
-        return DB::table('clientes')->insertGetId([
-            'persona_id' => $personaId,
-            'rfc' => $rfc,
-            'tipo_cliente' => $tipo ?? 'general',
-            'notas' => $notas,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertVendedor(int $personaId, float $comisionDefault, ?string $clave, int $by): int
-    {
-        return DB::table('vendedores')->insertGetId([
-            'persona_id' => $personaId,
-            'comision_default' => $comisionDefault,
-            'clave' => $clave,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertEmpleado(int $personaId, string $puestoEnum, ?string $puestoDetalle, ?string $numeroEmpleado, ?string $obs, int $by): int
-    {
-        return DB::table('empleados')->insertGetId([
-            'persona_id' => $personaId,
-            'puesto' => $puestoEnum, // ENUM puesto_empleado
-            'puesto_detalle' => $puestoDetalle,
-            'numero_empleado' => $numeroEmpleado,
-            'observaciones' => $obs,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertVariableGlobal(string $nombre, array $valor, ?string $descripcion, int $by): int
-    {
-        return DB::table('variables_globales')->insertGetId([
-            'nombre' => $nombre,
-            'valor' => json_encode($valor),
-            'descripcion' => $descripcion,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertLotificacion(string $nombre, ?array $jsonCroquis, int $numeroLotes, ?string $oficina, ?string $estado, int $by): int
-    {
-        return DB::table('lotificaciones')->insertGetId([
-            'nombre' => $nombre,
-            'json_croquis' => $jsonCroquis ? json_encode($jsonCroquis) : null,
-            'numero_lotes' => $numeroLotes,
-            'oficina' => $oficina,
-            'estado' => $estado,
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertSocio(string $nombre, string $color, ?string $tel, ?string $email, int $by): int
-    {
-        return DB::table('socios')->insertGetId([
-            'nombre' => $nombre,
-            'color' => $color,
-            'telefono' => $tel,
-            'email' => $email,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function attachLotificacionSocio(int $lotificacionId, int $socioId): void
-    {
-        DB::table('lotificacion_socios')->insert([
-            'lotificacion_id' => $lotificacionId,
-            'socio_id' => $socioId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    private function insertLote(
-        int $lotificacionId,
-        string $claveLote,
-        ?string $manzana,
-        ?string $numero,
-        string $estadoEnum,
-        float $contado,
-        float $credito,
-        ?string $notas,
-        int $by
-    ): int {
-        return DB::table('lotes')->insertGetId([
-            'lotificacion_id' => $lotificacionId,
-            'clave_lote' => $claveLote,
-            'manzana' => $manzana,
-            'numero' => $numero,
-            'estado' => $estadoEnum, // ENUM lote_estado
-            'costo_contado' => $contado,
-            'costo_credito' => $credito,
-            'notas' => $notas,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-            'baja_by' => $by,
-        ]);
-    }
-
-    private function insertBoletaPago(array $x): int
-    {
-        return DB::table('boletas_pago')->insertGetId([
-            'folio' => $x['folio'],
-
-            'cliente_id' => $x['cliente_id'],
-            'vendedor_id' => $x['vendedor_id'] ?? null,
-
-            'lotificacion_id' => $x['lotificacion_id'],
-            'socio_id' => $x['socio_id'] ?? null,
-            'lote_id' => $x['lote_id'],
-
-            'oficina' => $x['oficina'] ?? null,
-            'fecha_contrato' => $x['fecha_contrato'],
-            'tipo_venta' => $x['tipo_venta'] ?? 'CONTADO', // ENUM tipo_venta
-
-            'costo_contado' => $x['costo_contado'] ?? 0,
-            'costo_credito' => $x['costo_credito'] ?? 0,
-
-            'enganche' => $x['enganche'] ?? 0,
-            'comision_vendedor' => $x['comision_vendedor'] ?? 0,
-            'meses' => $x['meses'] ?? 0,
-
-            'observaciones' => $x['observaciones'] ?? null,
-
-            'created_by' => $x['created_by'] ?? null,
-            'updated_by' => $x['updated_by'] ?? null,
-
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertPartida(
-        int $boletaId,
-        string $folioPartida,
-        string $fechaPago,
-        float $monto,
-        bool $recargo,
-        float $montoRecargo,
-        string $tipoPagoEnum,
-        ?string $obs,
-        int $usuarioRegistro
-    ): int {
-        return DB::table('boletas_partidas')->insertGetId([
-            'boleta_id' => $boletaId,
-            'folio_partida' => $folioPartida,
-            'fecha_pago' => $fechaPago,
-            'monto' => $monto,
-
-            'recargo' => $recargo,
-            'monto_recargo' => $montoRecargo,
-
-            'tipo_pago' => $tipoPagoEnum, // ENUM tipo_partida_pago
-            'observacion' => $obs,
-
-            'usuario_registro_id' => $usuarioRegistro,
-            'usuario_modifico_id' => null,
-            'usuario_baja_id' => null,
-
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertSolicitud(array $x): int
-    {
-        return DB::table('solicitudes')->insertGetId([
-            'tipo' => $x['tipo'], // ENUM solicitud_tipo
-            'estatus' => $x['estatus'] ?? 'PENDIENTE', // ENUM solicitud_estatus
-
-            'modulo_id' => $x['modulo_id'] ?? null,
-
-            'tabla_objetivo' => $x['tabla_objetivo'],
-            'registro_id' => $x['registro_id'],
-
-            'motivo' => $x['motivo'] ?? null,
-            'payload' => isset($x['payload']) ? json_encode($x['payload']) : null,
-
-            'solicitado_por' => $x['solicitado_por'],
-            'solicitado_at' => now(),
-
-            'revisado_por' => $x['revisado_por'] ?? null,
-            'revisado_at' => null,
-            'decision_motivo' => $x['decision_motivo'] ?? null,
-
-            'created_at' => now(),
-            'updated_at' => now(),
-            'baja' => false,
-        ]);
-    }
-
-    private function insertAudit(int $usuarioId, ?int $moduloId, string $accion, string $tabla, ?int $registroId, $before, $after): void
-    {
-        DB::table('acciones_usuario_historial')->insert([
-            'usuario_id' => $usuarioId,
-            'modulo_id' => $moduloId,
-            'accion' => strtoupper($accion),
-            'tabla' => $tabla,
-            'registro_id' => $registroId,
-            'ip' => '127.0.0.1',
-            'user_agent' => 'Seeder/DatabaseSeeder',
-            'before_data' => $before ? json_encode($before) : null,
-            'after_data' => $after ? json_encode($after) : null,
-            'created_at' => now(),
-        ]);
-    }
-}
+}*/

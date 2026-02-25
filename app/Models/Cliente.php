@@ -4,20 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Vendedor extends Model
+class Cliente extends Model
 {
-    protected $table = 'vendedores';
+    protected $table = 'clientes';
 
     protected $fillable = [
-        'empleado_id','comision_default','clave',
+        'persona_id','rfc','tipo_cliente','notas',
         'baja','baja_at','baja_by','baja_motivo'
     ];
 
     protected $casts = [
-        'comision_default' => 'decimal:2',
         'baja' => 'boolean',
         'baja_at' => 'datetime',
     ];
 
-    public function empleado(){ return $this->belongsTo(Empleado::class, 'empleado_id'); }
+    public function persona(){ return $this->belongsTo(Persona::class, 'persona_id'); }
 }
