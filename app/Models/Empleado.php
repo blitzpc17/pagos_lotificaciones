@@ -19,6 +19,8 @@ class Empleado extends Model
     ];
 
     public function persona() { return $this->belongsTo(Persona::class, 'persona_id'); }
-    public function vendedor(){ return $this->hasOne(Vendedor::class, 'empleado_id'); }
-    public function usuario() { return $this->hasOne(Usuario::class, 'empleado_id'); }
+
+    // En el schema, vendedores y usuarios referencian persona_id
+    public function vendedor(){ return $this->hasOne(Vendedor::class, 'persona_id', 'persona_id'); }
+    public function usuario() { return $this->hasOne(Usuario::class, 'persona_id', 'persona_id'); }
 }

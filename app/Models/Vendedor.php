@@ -9,8 +9,13 @@ class Vendedor extends Model
     protected $table = 'vendedores';
 
     protected $fillable = [
-        'empleado_id','comision_default','clave',
-        'baja','baja_at','baja_by','baja_motivo'
+        'persona_id',
+        'comision_default',
+        'clave',
+        'baja',
+        'baja_at',
+        'baja_by',
+        'baja_motivo',
     ];
 
     protected $casts = [
@@ -19,5 +24,8 @@ class Vendedor extends Model
         'baja_at' => 'datetime',
     ];
 
-    public function empleado(){ return $this->belongsTo(Empleado::class, 'empleado_id'); }
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\UsuarioAccionModulo;
+use App\Models\UsuarioPermisoModulo;
 
 class CheckActionPermission
 {
@@ -16,11 +16,11 @@ class CheckActionPermission
         $moduloId = $request->attributes->get('current_modulo_id');
         if(!$moduloId) return $next($request);
 
-        $perm = UsuarioAccionModulo::where('usuario_id',$u->id)->where('modulo_id',$moduloId)->first();
+        $perm = UsuarioPermisoModulo::where('usuario_id',$u->id)
+            ->where('modulo_id',$moduloId)
+            ->first();
 
-        // Si no hay fila, interpreta:
-        // - ver: true
-        // - crear/modificar/baja: false
+        // Default sin override: ver=true, demás=false
         $can = match($accion){
             'ver' => $perm ? $perm->puede_ver : true,
             'crear' => $perm ? $perm->puede_crear : false,

@@ -6,7 +6,7 @@ use App\Models\Rol;
 use App\Models\Modulo;
 use App\Models\RolModulo;
 use App\Models\Usuario;
-use App\Models\UsuarioAccionModulo;
+use App\Models\UsuarioPermisoModulo;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,6 @@ class PermisosController extends Controller
 {
     public function index()
     {
-        // vista única: eliges rol para módulos, eliges usuario para acciones
         $roles = Rol::where('baja', false)->orderBy('nombre')->get(['id','nombre']);
         $usuarios = Usuario::where('baja', false)->orderByDesc('id')->get(['id','username','email']);
         $modulos = Modulo::where('baja', false)->orderBy('parent_id')->orderBy('orden')->get(['id','nombre','parent_id','ruta']);
@@ -63,7 +62,7 @@ class PermisosController extends Controller
     // -------- USUARIO -> ACCIONES POR MODULO ----------
     public function getUserActions(Usuario $usuario)
     {
-        $rows = UsuarioAccionModulo::where('usuario_id',$usuario->id)->get();
+        $rows = UsuarioPermisoModulo::where('usuario_id',$usuario->id)->get();
         $map = [];
         foreach($rows as $r){
             $map[$r->modulo_id] = [
@@ -85,12 +84,12 @@ class PermisosController extends Controller
         $me = auth()->user();
 
         return DB::transaction(function() use ($data, $request, $usuario, $me){
-            $before = UsuarioAccionModulo::where('usuario_id',$usuario->id)->get()->toArray();
+            $before = UsuarioPermisoModulo::where('usuario_id',$usuario->id)->get()->toArray();
 
-            UsuarioAccionModulo::where('usuario_id',$usuario->id)->delete();
+            UsuarioPermisoModulo::where('usuario_id',$usuario->id)->delete();
 
             foreach($data['acciones'] as $moduloId => $a){
-                UsuarioAccionModulo::create([
+                UsuarioPermisoModulo::create([
                     'usuario_id'=>$usuario->id,
                     'modulo_id'=>(int)$moduloId,
                     'puede_ver'=> (bool)($a['puede_ver'] ?? true),
@@ -101,8 +100,8 @@ class PermisosController extends Controller
             }
 
             if (class_exists(AuditService::class)) {
-                $after = UsuarioAccionModulo::where('usuario_id',$usuario->id)->get()->toArray();
-                AuditService::log($me->id,'MODIFICAR','usuarios_acciones_modulo',$usuario->id,
+                $after = UsuarioPermisoModulo::where('usuario_id',$usuario->id)->get()->toArray();
+                AuditService::log($me->id,'MODIFICAR','usuarios_permisos_modulo',$usuario->id,
                     ['usuario_id'=>$usuario->id,'rows'=>$before],
                     ['usuario_id'=>$usuario->id,'rows'=>$after],
                     $request

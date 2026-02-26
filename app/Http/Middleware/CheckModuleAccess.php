@@ -4,28 +4,41 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\Modulo;
-use App\Models\RolModulo;
+use Illuminate\Support\Facades\DB;
 
 class CheckModuleAccess
 {
-    public function handle(Request $request, Closure $next, string $moduloRutaOrNombre)
+    public function handle(Request $request, Closure $next)
     {
         $u = auth()->user();
-        if(!$u) return redirect()->route('login');
+        if (!$u) return redirect()->route('login');
 
-        // Buscar módulo por ruta o nombre
-        $mod = Modulo::where('baja',false)
-            ->where(function($q) use ($moduloRutaOrNombre){
-                $q->where('ruta',$moduloRutaOrNombre)->orWhere('nombre',$moduloRutaOrNombre);
-            })->first();
+        $path = '/'.$request->path();
 
-        if(!$mod) abort(403, 'Módulo no existe.');
+        // Busca módulo por ruta exacta (puedes adaptar si usas rutas con prefijos)
+        $mod = DB::table('modulos')
+            ->where('baja', false)
+            ->where('is_active', true)
+            ->where(function($q) use ($path){
+                $q->where('ruta', $path)
+                  ->orWhere('ruta', ltrim($path,'/')); // por si guardaste sin slash
+            })
+            ->first();
 
-        $has = RolModulo::where('role_id',$u->role_id)->where('modulo_id',$mod->id)->exists();
-        if(!$has) abort(403, 'Sin acceso al módulo.');
+        if ($mod) {
+            $request->attributes->set('current_modulo_id', (int)$mod->id);
 
-        $request->attributes->set('current_modulo_id', $mod->id);
+            // valida acceso del rol al módulo
+            $hasRole = DB::table('roles_modulos')
+                ->where('role_id', $u->role_id)
+                ->where('modulo_id', $mod->id)
+                ->exists();
+
+            if (!$hasRole) abort(403, 'Sin acceso al módulo.');
+        } else {
+            // si no se encuentra módulo para la ruta, deja pasar (login, assets, etc.)
+            $request->attributes->set('current_modulo_id', null);
+        }
 
         return $next($request);
     }

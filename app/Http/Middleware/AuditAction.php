@@ -3,29 +3,28 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use App\Services\AuditService;
 
 class AuditAction
 {
-    public function handle($request, Closure $next, $accion = 'ver', $moduloId = null)
+    public function handle(Request $request, Closure $next, string $accion = 'VER')
     {
         $resp = $next($request);
 
-        if (auth()->check()) {
-            DB::table('usuarios_acciones_modulo')->insert([
-                'usuario_id' => auth()->id(),
-                'modulo_id' => $moduloId ? (int)$moduloId : null,
-                'accion' => $accion,
-                'tabla' => null,
-                'registro_id' => null,
-                'meta' => json_encode([
-                    'path' => $request->path(),
-                    'method' => $request->method(),
-                    'ip' => $request->ip(),
-                    'ua' => substr((string)$request->userAgent(), 0, 240),
-                ]),
-                'created_at' => now(),
-            ]);
+        $u = auth()->user();
+        if ($u) {
+            $moduloId = $request->attributes->get('current_modulo_id');
+            AuditService::log(
+                usuarioId: $u->id,
+                accion: strtoupper($accion),
+                tabla: null,
+                registroId: null,
+                before: null,
+                after: null,
+                request: $request,
+                moduloId: $moduloId ? (int)$moduloId : null
+            );
         }
 
         return $resp;

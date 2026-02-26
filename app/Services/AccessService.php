@@ -11,7 +11,7 @@ class AccessService
 {
     public function menuFor(Usuario $user): Collection
     {
-        // 1) Validar rol activo/no baja
+        // rol activo
         $rolOk = DB::table('roles')
             ->where('id', $user->role_id)
             ->where('is_active', true)
@@ -20,7 +20,7 @@ class AccessService
 
         if (!$rolOk) return collect();
 
-        // 2) Módulos asignados al rol
+        // módulos del rol
         $roleModuleIds = DB::table('roles_modulos')
             ->where('role_id', $user->role_id)
             ->pluck('modulo_id')
@@ -28,13 +28,13 @@ class AccessService
 
         if ($roleModuleIds->isEmpty()) return collect();
 
-        // 3) Overrides por usuario
-        $userPerms = DB::table('usuarios_acciones_modulo')
+        // overrides por usuario (permisos)
+        $userPerms = DB::table('usuarios_permisos_modulo')
             ->where('usuario_id', $user->id)
             ->get()
             ->keyBy('modulo_id');
 
-        // 4) Traer módulos permitidos por rol (solo activos y no baja)
+        // módulos activos
         $mods = Modulo::query()
             ->whereIn('id', $roleModuleIds)
             ->where('is_active', true)
@@ -43,36 +43,35 @@ class AccessService
             ->orderBy('orden')
             ->get();
 
-        // 5) Filtrar por puede_ver efectivo (si no hay override, default true por rol)
+        // filtrar por puede_ver efectivo
         $allowed = $mods->filter(function ($m) use ($userPerms) {
-            if (!isset($userPerms[$m->id])) return true;
-            return (bool) $userPerms[$m->id]->puede_ver;
+            if (!isset($userPerms[$m->id])) return true; // por rol: ver=true
+            return (bool)$userPerms[$m->id]->puede_ver;
         })->values();
 
         if ($allowed->isEmpty()) return collect();
 
-        // 6) Asegurar que si hay hijos, existan sus padres en el menú
-        $parentIdsMissing = $allowed->pluck('parent_id')->filter()->unique()
+        // asegurar padres (para árbol)
+        $missingParents = $allowed->pluck('parent_id')->filter()->unique()
             ->diff($allowed->pluck('id')->unique());
 
-        if ($parentIdsMissing->isNotEmpty()) {
+        if ($missingParents->isNotEmpty()) {
             $parents = Modulo::query()
-                ->whereIn('id', $parentIdsMissing)
+                ->whereIn('id', $missingParents)
                 ->where('is_active', true)
                 ->where('baja', false)
                 ->get();
 
-            // Nota: si el rol no tenía el padre asignado, lo incluimos para render de árbol
             $allowed = $parents->merge($allowed)
                 ->unique('id')
-                ->sortBy([['parent_id','asc'],['orden','asc']])
+                ->sortBy([['parent_id', 'asc'], ['orden', 'asc']])
                 ->values();
         }
 
-        // 7) Solo items marcados como menú
+        // solo menú
         $allowed = $allowed->where('es_menu', true)->values();
 
-        // 8) Armar árbol
+        // armar árbol
         $byParent = $allowed->groupBy('parent_id');
 
         $tree = ($byParent[null] ?? collect())->map(function ($parent) use ($byParent) {
@@ -87,48 +86,42 @@ class AccessService
 
     public function can(Usuario $user, int $moduloId, string $action): bool
     {
-        // rol debe estar activo/no baja
+        // rol activo
         $rolOk = DB::table('roles')
             ->where('id', $user->role_id)
             ->where('is_active', true)
             ->where('baja', false)
             ->exists();
-
         if (!$rolOk) return false;
 
-        // módulo debe estar activo/no baja
+        // módulo activo
         $modOk = DB::table('modulos')
             ->where('id', $moduloId)
             ->where('is_active', true)
             ->where('baja', false)
             ->exists();
-
         if (!$modOk) return false;
 
         // rol debe tener el módulo
-        $hasRoleAccess = DB::table('roles_modulos')
+        $hasRole = DB::table('roles_modulos')
             ->where('role_id', $user->role_id)
             ->where('modulo_id', $moduloId)
             ->exists();
+        if (!$hasRole) return false;
 
-        if (!$hasRoleAccess) return false;
-
-        // override por usuario si existe
-        $perm = DB::table('usuarios_acciones_modulo')
+        // override por usuario (si no hay, default ver=true)
+        $perm = DB::table('usuarios_permisos_modulo')
             ->where('usuario_id', $user->id)
             ->where('modulo_id', $moduloId)
             ->first();
 
-        // default sin override: ver=true, crear/mod/baja=false
-        if (!$perm) {
-            return $action === 'ver';
-        }
+        if (!$perm) return $action === 'ver';
 
         return match ($action) {
-            'ver' => (bool) $perm->puede_ver,
-            'crear' => (bool) $perm->puede_crear,
-            'modificar' => (bool) $perm->puede_modificar,
-            'baja' => (bool) $perm->puede_baja,
+            'ver' => (bool)$perm->puede_ver,
+            'crear' => (bool)$perm->puede_crear,
+            'modificar' => (bool)$perm->puede_modificar,
+            'baja' => (bool)$perm->puede_baja,
             default => false,
         };
     }
