@@ -12,7 +12,7 @@
 
   <table id="tblModulos" class="display" style="width:100%">
     <thead><tr>
-      <th>ID</th><th>Nombre</th><th>Ruta</th><th>Icono</th><th>Padre</th><th>Menú</th><th>Orden</th><th>Estatus</th><th style="text-align:right;">Acciones</th>
+      <th>ID</th><th>Padre</th><th>Nombre</th><th>Ruta</th><th>Icono</th><th>Menú</th><th>Orden</th><th>Estatus</th><th style="text-align:right;">Acciones</th>
     </tr></thead>
     <tbody></tbody>
   </table>
@@ -25,7 +25,11 @@
       <div class="field"><label>Nombre</label><input id="m_add_nombre"></div>
       <div class="field"><label>Ruta</label><input id="m_add_ruta" placeholder="/clientes"></div>
       <div class="field"><label>Icono</label><input id="m_add_icono" placeholder="fa-solid fa-users"></div>
-      <div class="field"><label>Parent ID</label><input id="m_add_parent_id" type="number"></div>
+      <div class="field">
+        <label>Padre</label>
+        <select id="m_add_parent_id"></select>
+        <div class="muted">Solo lista módulos padre (categorías).</div>
+      </div>
       <div class="field"><label>Es menú</label><select id="m_add_es_menu"><option value="1">Sí</option><option value="0">No</option></select></div>
       <div class="field"><label>Orden</label><input id="m_add_orden" type="number" value="0"></div>
       <div class="field"><label>Activo</label><select id="m_add_is_active"><option value="1">Sí</option><option value="0">No</option></select></div>
@@ -45,7 +49,10 @@
       <div class="field"><label>Nombre</label><input id="m_edit_nombre"></div>
       <div class="field"><label>Ruta</label><input id="m_edit_ruta"></div>
       <div class="field"><label>Icono</label><input id="m_edit_icono"></div>
-      <div class="field"><label>Parent ID</label><input id="m_edit_parent_id" type="number"></div>
+      <div class="field">
+        <label>Padre</label>
+        <select id="m_edit_parent_id"></select>
+      </div>
       <div class="field"><label>Es menú</label><select id="m_edit_es_menu"><option value="1">Sí</option><option value="0">No</option></select></div>
       <div class="field"><label>Orden</label><input id="m_edit_orden" type="number"></div>
       <div class="field"><label>Activo</label><select id="m_edit_is_active"><option value="1">Sí</option><option value="0">No</option></select></div>

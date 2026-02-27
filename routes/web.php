@@ -273,6 +273,11 @@ Route::middleware('auth')->group(function () {
     // =========================
     Route::middleware(['module:/modulos','action:ver','audit:VER'])->group(function () {
         Route::get('/modulos', [ModulosController::class,'index'])->name('modulos.index');
+
+        // ✅ SIEMPRE antes del {modulo}
+        Route::get('/modulos/datatable', [ModulosController::class,'datatable'])->name('modulos.datatable');
+        Route::get('/modulos/parents', [ModulosController::class,'parents'])->name('modulos.parents');
+
         Route::get('/modulos/{modulo}', [ModulosController::class,'show'])->name('modulos.show');
     });
 
