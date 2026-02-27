@@ -200,11 +200,13 @@
     baja: "{{ route('proveedores.baja', ['id' => '__ID__']) }}",
 
     contactos: "{{ route('proveedores.contactos', ['id' => '__ID__']) }}",
-    addTel: "{{ route('proveedores.tel.add', ['id' => '__ID__']) }}",
-    addMail: "{{ route('proveedores.mail.add', ['id' => '__ID__']) }}",
-    addDir: "{{ route('proveedores.dir.add', ['id' => '__ID__']) }}",
-    bajaContacto: "{{ route('proveedores.contacto.baja', ['tipo' => '__T__', 'cid' => '__CID__']) }}"
-  };
+    telAdd: "{{ url('/proveedores/__ID__/telefonos') }}",
+    mailAdd: "{{ url('/proveedores/__ID__/correos') }}",
+    dirAdd: "{{ url('/proveedores/__ID__/direcciones') }}",
+
+    contactoBaja: "{{ route('proveedores.contacto.baja', ['tipo'=>'__T__','cid'=>'__CID__']) }}",
+    contactoReactivar: "{{ route('proveedores.contacto.reactivar', ['tipo'=>'__T__','cid'=>'__CID__']) }}",
+      };
 </script>
 <script src="{{ asset('assets/js/proveedores.js') }}"></script>
 @endpush

@@ -280,5 +280,14 @@
 @endsection
 
 @push('scripts')
+<script>
+  window.ROUTES = window.ROUTES || {};
+  window.ROUTES.empleados = window.ROUTES.empleados || {};
+  window.ROUTES.empleados.telAdd = "{{ url('/empleados/__ID__/telefonos') }}";
+  window.ROUTES.empleados.mailAdd = "{{ url('/empleados/__ID__/correos') }}";
+  window.ROUTES.empleados.dirAdd = "{{ url('/empleados/__ID__/direcciones') }}";
+  window.ROUTES.empleados.contactoBaja = "{{ route('empleados.contacto.baja', ['tipo'=>'__T__','cid'=>'__CID__']) }}";
+  window.ROUTES.empleados.contactoReactivar = "{{ route('empleados.contacto.reactivar', ['tipo'=>'__T__','cid'=>'__CID__']) }}";
+</script>
 <script src="{{ asset('assets/js/empleados.js') }}"></script>
 @endpush

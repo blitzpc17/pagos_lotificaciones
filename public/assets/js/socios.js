@@ -17,6 +17,13 @@ $(function(){
       .replaceAll('"','&quot;').replaceAll("'","&#039;");
   }
 
+  function toastOk(msg){
+    Swal.fire({icon:'success', title: msg || 'Listo', timer: 1200, showConfirmButton:false});
+  }
+  function toastErr(xhr, fallback){
+    Swal.fire({icon:'error', title: (xhr?.responseJSON?.message || fallback || 'Error')});
+  }
+
   // ---- Color helpers ----
   const normalizeHex = (v) => {
     if(!v) return '#2D6CDF';
@@ -72,7 +79,44 @@ $(function(){
     $(this).css('border-color', '');
   });
 
+  // ---- Baja / Reactivar contacto ----
+  async function pedirMotivoBajaContacto(){
+    const r = await Swal.fire({
+      title: 'Motivo de baja del contacto',
+      input: 'textarea',
+      inputPlaceholder: 'Escribe el motivo…',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar baja',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      inputValidator: (v)=>{
+        if(!v || String(v).trim().length < 3) return 'Motivo obligatorio (mínimo 3 caracteres).';
+      }
+    });
+    return r.isConfirmed ? String(r.value).trim() : null;
+  }
+
+  const urlContactoBaja = (tipo, cid)=> (R.contactoBaja||'').replace('__T__', tipo).replace('__CID__', cid);
+  const urlContactoReactivar = (tipo, cid)=> (R.contactoReactivar||'').replace('__T__', tipo).replace('__CID__', cid);
+
   // ---- templates contactos ----
+  function contactActionBtn(kind, obj){
+    const isBaja = !!obj.baja;
+    const icon = isBaja ? 'fa-rotate-left' : 'fa-trash';
+    const title = isBaja ? 'Reactivar' : 'Dar de baja';
+    const motivo = isBaja ? `<div class="muted" style="margin-top:6px;font-size:12px;">Motivo: ${esc(obj.baja_motivo||'—')}</div>` : ``;
+
+    return `
+      <button type="button" class="btn btnContactAction"
+              data-kind="${kind}"
+              data-baja="${isBaja ? 1 : 0}"
+              title="${title}">
+        <i class="fa-solid ${icon}"></i>
+      </button>
+      ${motivo}
+    `;
+  }
+
   function telRow(t={}){
     return `
     <div class="card tel-row" data-id="${t.id||''}" style="padding:12px;">
@@ -88,7 +132,7 @@ $(function(){
           </label>
         </div>
         <div class="field" style="grid-column:span 1;align-items:flex-end;">
-          <button type="button" class="btn btnDelRow" data-kind="tel" title="Quitar"><i class="fa-solid fa-trash"></i></button>
+          ${contactActionBtn('tel', t)}
         </div>
       </div>
     </div>`;
@@ -108,7 +152,7 @@ $(function(){
           </label>
         </div>
         <div class="field" style="grid-column:span 1;align-items:flex-end;">
-          <button type="button" class="btn btnDelRow" data-kind="mail" title="Quitar"><i class="fa-solid fa-trash"></i></button>
+          ${contactActionBtn('mail', c)}
         </div>
       </div>
     </div>`;
@@ -128,7 +172,7 @@ $(function(){
           </label>
         </div>
         <div class="field" style="grid-column:span 1;align-items:flex-end;">
-          <button type="button" class="btn btnDelRow" data-kind="dir" title="Quitar"><i class="fa-solid fa-trash"></i></button>
+          ${contactActionBtn('dir', d)}
         </div>
 
         <div class="field" style="grid-column:span 3;"><label>No. Ext</label><input type="text" class="dir-ext" value="${esc(d.numero_ext||'')}"></div>
@@ -156,7 +200,33 @@ $(function(){
   enforceSinglePrincipal('#dirListAddS','.dir-principal');
   enforceSinglePrincipal('#dirListEditS','.dir-principal');
 
-  $(document).on('click','.btnDelRow',function(){ $(this).closest('.card').remove(); });
+  // Acción contacto: si no hay id => quitar del DOM; si hay id => baja/reactivar
+  $(document).on('click', '.btnContactAction', async function(){
+    const $btn = $(this);
+    const kind = $btn.data('kind'); // tel|mail|dir
+    const isBaja = String($btn.data('baja')) === '1';
+    const $card = $btn.closest('.card');
+    const cid = $card.data('id');
+
+    // fila nueva (sin id en BD)
+    if(!cid){
+      $card.remove();
+      return;
+    }
+
+    if(isBaja){
+      $.post(urlContactoReactivar(kind, cid), {})
+        .done(()=>{ refreshContactosEdit(); toastOk('Contacto reactivado'); })
+        .fail((xhr)=> toastErr(xhr,'No se pudo reactivar'));
+    }else{
+      const motivo = await pedirMotivoBajaContacto();
+      if(!motivo) return;
+
+      $.post(urlContactoBaja(kind, cid), {motivo})
+        .done(()=>{ refreshContactosEdit(); toastOk('Contacto dado de baja'); })
+        .fail((xhr)=> toastErr(xhr,'No se pudo dar de baja'));
+    }
+  });
 
   // ---- DataTable ----
   const dt = window.initCmsDataTable('#tblSocios', {
@@ -251,6 +321,7 @@ $(function(){
       });
     });
 
+    // asegúrate que haya principal
     if(payload.telefonos.length && !payload.telefonos.some(x=>x.es_principal===1)) payload.telefonos[0].es_principal=1;
     if(payload.correos.length && !payload.correos.some(x=>x.es_principal===1)) payload.correos[0].es_principal=1;
     if(payload.direcciones.length && !payload.direcciones.some(x=>x.es_principal===1)) payload.direcciones[0].es_principal=1;
@@ -258,24 +329,67 @@ $(function(){
     return payload;
   }
 
-  $('#btnSocioSaveAdd').on('click', function(){
+  // Helper POST JSON
+  const postJson = (url, body) => $.ajax({ url, type:'POST', data: JSON.stringify(body), contentType:'application/json' });
+
+  // ---- Guardar ADD (Opción A) ----
+  $('#btnSocioSaveAdd').on('click', async function(){
     const payload = buildPayload('add');
-    $.ajax({
-      url: R.store,
-      type:'POST',
-      data: JSON.stringify(payload),
-      contentType:'application/json',
-      success: function(){
-        closeModal('#modalSocioAdd');
-        dt.ajax.reload(null,false);
-        Swal.fire({icon:'success',title:'Guardado',text:'Socio guardado.',timer:1200,showConfirmButton:false});
-      },
-      error: function(xhr){
-        const res=xhr.responseJSON||{};
-        const e=res.errors?Object.values(res.errors)[0]?.[0]:null;
-        Swal.fire({icon:'error',title:res.message||'Error',text:e||'Revisa datos.'});
+    const socioPayload = { nombre: payload.nombre, color: payload.color };
+
+    try{
+      const res = await $.ajax({
+        url: R.store,
+        type:'POST',
+        data: JSON.stringify(socioPayload),
+        contentType:'application/json',
+      });
+
+      const socioId = res?.id;
+      if(!socioId) throw new Error('No regresó id del socio');
+
+      // teléfonos
+      for(const t of (payload.telefonos||[])){
+        await postJson(urlWithId(R.telAdd, socioId), {
+          etiqueta: t.etiqueta,
+          telefono: t.telefono,
+          extension: t.extension,
+          es_principal: !!t.es_principal
+        });
       }
-    });
+      // correos
+      for(const c of (payload.correos||[])){
+        await postJson(urlWithId(R.mailAdd, socioId), {
+          etiqueta: c.etiqueta,
+          correo: c.correo,
+          es_principal: !!c.es_principal
+        });
+      }
+      // direcciones
+      for(const d of (payload.direcciones||[])){
+        await postJson(urlWithId(R.dirAdd, socioId), {
+          etiqueta: d.etiqueta,
+          calle: d.calle,
+          numero_ext: d.numero_ext,
+          numero_int: d.numero_int,
+          colonia: d.colonia,
+          municipio: d.municipio,
+          estado: d.estado,
+          cp: d.cp,
+          referencias: d.referencias,
+          es_principal: !!d.es_principal
+        });
+      }
+
+      closeModal('#modalSocioAdd');
+      dt.ajax.reload(null,false);
+      toastOk('Socio guardado');
+
+    }catch(xhr){
+      const res=xhr?.responseJSON||{};
+      const e=res.errors?Object.values(res.errors)[0]?.[0]:null;
+      Swal.fire({icon:'error',title:res.message||'Error',text:e||'Revisa datos.'});
+    }
   });
 
   // ---- Edit ----
@@ -302,44 +416,127 @@ $(function(){
     });
   });
 
-  $('#btnSocioSaveEdit').on('click', function(){
-    const id=$('#s_edit_id').val();
+  // refrescar contactos edit (vía show)
+  function refreshContactosEdit(){
+    const id = $('#s_edit_id').val();
+    if(!id) return;
+    $.get(urlWithId(R.show, id), function(r){
+      $('#telListEditS').html('');
+      $('#mailListEditS').html('');
+      $('#dirListEditS').html('');
+      (r.telefonos||[]).forEach(t=>$('#telListEditS').append(telRow(t)));
+      (r.correos||[]).forEach(c=>$('#mailListEditS').append(mailRow(c)));
+      (r.direcciones||[]).forEach(d=>$('#dirListEditS').append(dirRow(d)));
+      if(!r.telefonos?.length) $('#telListEditS').append(telRow({es_principal:true}));
+      if(!r.correos?.length) $('#mailListEditS').append(mailRow({es_principal:true}));
+      if(!r.direcciones?.length) $('#dirListEditS').append(dirRow({es_principal:true}));
+    });
+  }
+
+  // ---- Guardar EDIT (Opción A) ----
+  $('#btnSocioSaveEdit').on('click', async function(){
+    const id = $('#s_edit_id').val();
     const payload = buildPayload('edit');
 
-    $.ajax({
-      url: urlWithId(R.update,id),
-      type:'PUT',
-      data: JSON.stringify(payload),
-      contentType:'application/json',
-      success: function(){
-        closeModal('#modalSocioEdit');
-        dt.ajax.reload(null,false);
-        Swal.fire({icon:'success',title:'Actualizado',text:'Cambios guardados.',timer:1200,showConfirmButton:false});
-      },
-      error: function(xhr){
-        const res=xhr.responseJSON||{};
-        const e=res.errors?Object.values(res.errors)[0]?.[0]:null;
-        Swal.fire({icon:'error',title:res.message||'Error',text:e||'Revisa datos.'});
+    const socioPayload = { nombre: payload.nombre, color: payload.color };
+
+    try{
+      // 1) actualiza socio
+      await $.ajax({
+        url: urlWithId(R.update,id),
+        type:'PUT',
+        data: JSON.stringify(socioPayload),
+        contentType:'application/json'
+      });
+
+      const postJson = (url, body) => $.ajax({
+        url, type:'POST', data: JSON.stringify(body), contentType:'application/json'
+      });
+
+      // 2) upsert teléfonos (TODOS: con id y sin id)
+      for(const t of (payload.telefonos||[])){
+        await postJson(urlWithId(R.telAdd, id), {
+          id: t.id || null,
+          etiqueta: t.etiqueta,
+          telefono: t.telefono,
+          extension: t.extension,
+          es_principal: !!t.es_principal
+        });
       }
-    });
+
+      // 3) upsert correos
+      for(const c of (payload.correos||[])){
+        await postJson(urlWithId(R.mailAdd, id), {
+          id: c.id || null,
+          etiqueta: c.etiqueta,
+          correo: c.correo,
+          es_principal: !!c.es_principal
+        });
+      }
+
+      // 4) upsert direcciones
+      for(const d of (payload.direcciones||[])){
+        await postJson(urlWithId(R.dirAdd, id), {
+          id: d.id || null,
+          etiqueta: d.etiqueta,
+          calle: d.calle,
+          numero_ext: d.numero_ext,
+          numero_int: d.numero_int,
+          colonia: d.colonia,
+          municipio: d.municipio,
+          estado: d.estado,
+          cp: d.cp,
+          referencias: d.referencias,
+          es_principal: !!d.es_principal
+        });
+      }
+
+      // 5) refresca contactos (para traer ids nuevos)
+      refreshContactosEdit();
+
+      closeModal('#modalSocioEdit');
+      dt.ajax.reload(null,false);
+      toastOk('Cambios guardados');
+
+    }catch(xhr){
+      const res=xhr.responseJSON||{};
+      const e=res.errors?Object.values(res.errors)[0]?.[0]:null;
+      Swal.fire({icon:'error',title:res.message||'Error',text:e||'Revisa datos.'});
+    }
   });
 
-  // ---- Baja ----
+  // ---- Baja socio (motivo) ----
   $(document).on('click','.btnBajaSocio', function(){
     const id=$(this).data('id');
     Swal.fire({
       icon:'warning',
-      title:'¿Dar de baja?',
+      title:'¿Dar de baja al socio?',
       text:'Baja lógica (no se elimina).',
       showCancelButton:true,
       confirmButtonText:'Sí, dar de baja',
       cancelButtonText:'Cancelar',
-      confirmButtonColor:'#D9042B'
+      reverseButtons:true
     }).then(async (r)=>{
       if(!r.isConfirmed) return;
-      await $.post(urlWithId(R.baja,id), {motivo:'Baja desde UI'});
-      Swal.fire({icon:'success', title:'Listo', timer:1000, showConfirmButton:false});
-      dt.ajax.reload(null,false);
+
+      const mot = await Swal.fire({
+        title: 'Motivo de baja del socio',
+        input: 'textarea',
+        inputPlaceholder: 'Escribe el motivo…',
+        showCancelButton: true,
+        confirmButtonText: 'Aplicar baja',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        inputValidator: (v)=>{
+          if(!v || String(v).trim().length < 3) return 'Motivo obligatorio (mínimo 3 caracteres).';
+        }
+      });
+
+      if(!mot.isConfirmed) return;
+
+      $.post(urlWithId(R.baja,id), {motivo: String(mot.value).trim()})
+        .done(()=>{ toastOk('Baja aplicada'); dt.ajax.reload(null,false); })
+        .fail((xhr)=> toastErr(xhr,'No se pudo dar de baja'));
     });
   });
 

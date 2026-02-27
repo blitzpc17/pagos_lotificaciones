@@ -218,10 +218,12 @@
     baja: "{{ route('clientes.baja', ['id' => '__ID__']) }}",
 
     contactos: "{{ route('clientes.contactos', ['id' => '__ID__']) }}",
-    addTel: "{{ route('clientes.tel.add', ['id' => '__ID__']) }}",
-    addMail: "{{ route('clientes.mail.add', ['id' => '__ID__']) }}",
-    addDir: "{{ route('clientes.dir.add', ['id' => '__ID__']) }}",
-    bajaContacto: "{{ route('clientes.contacto.baja', ['tipo' => '__T__', 'cid' => '__CID__']) }}"
+    telAdd: "{{ url('/clientes/__ID__/telefonos') }}",
+    mailAdd: "{{ url('/clientes/__ID__/correos') }}",
+    dirAdd: "{{ url('/clientes/__ID__/direcciones') }}",
+
+contactoBaja: "{{ route('clientes.contacto.baja', ['tipo'=>'__T__','cid'=>'__CID__']) }}",
+contactoReactivar: "{{ route('clientes.contacto.reactivar', ['tipo'=>'__T__','cid'=>'__CID__']) }}",
   };
 </script>
 <script src="{{ asset('assets/js/clientes.js') }}"></script>

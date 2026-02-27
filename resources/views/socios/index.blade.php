@@ -229,7 +229,16 @@
     store: "{{ route('socios.store') }}",
     show: "{{ url('/socios/__ID__') }}",
     update: "{{ url('/socios/__ID__') }}",
-    baja: "{{ url('/socios/__ID__/baja') }}"
+    baja: "{{ url('/socios/__ID__/baja') }}",
+
+    // ✅ endpoints centralizados (PersonaContactosController)
+    telAdd: "{{ url('/socios/__ID__/telefonos') }}",
+    mailAdd: "{{ url('/socios/__ID__/correos') }}",
+    dirAdd: "{{ url('/socios/__ID__/direcciones') }}",
+
+    // ✅ baja/reactivar contacto (motivo requerido en baja)
+    contactoBaja: "{{ route('socios.contacto.baja', ['tipo' => '__T__', 'cid' => '__CID__']) }}",
+    contactoReactivar: "{{ route('socios.contacto.reactivar', ['tipo' => '__T__', 'cid' => '__CID__']) }}"
   };
 </script>
 <script src="{{ asset('assets/js/socios.js') }}"></script>
