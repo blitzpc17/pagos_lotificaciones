@@ -20,7 +20,6 @@ class UsuariosController extends Controller
 
     public function datatable()
     {
-        // Mostrar activos + bajas (marcar y mostrar motivo)
         $rows = DB::table('usuarios as u')
             ->join('personas as p','p.id','=','u.persona_id')
             ->leftJoin('empleados as e','e.persona_id','=','u.persona_id')
@@ -48,6 +47,7 @@ class UsuariosController extends Controller
                     'empleado' => e($empleadoLabel).($u->baja ? ' <span class="badge danger" style="margin-left:8px;">BAJA</span>' : ''),
                     'rol' => e($u->rol ?? ''),
                     'estatus' => $estatus,
+                    '_is_baja' => (bool)$u->baja,
                 ];
             });
 
@@ -159,14 +159,18 @@ class UsuariosController extends Controller
         return response()->json(['ok'=>true]);
     }
 
-    public function baja($id)
+    public function baja(Request $request, $id)
     {
+        $request->validate([
+            'motivo' => ['required','string','min:3','max:500']
+        ]);
+
         $u = Usuario::findOrFail($id);
         $u->update([
             'baja' => true,
             'baja_at' => now(),
             'baja_by' => auth()->id(),
-            'baja_motivo' => request('motivo','Baja desde módulo usuarios'),
+            'baja_motivo' => $request->motivo,
             'is_active' => false,
         ]);
         return response()->json(['ok'=>true]);

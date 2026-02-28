@@ -23,7 +23,7 @@ $(function(){
       { data:'nombre' },
       { data:'descripcion' },
       { data:'estatus_html', orderable:false, searchable:false },
-      { data:'acciones_html', orderable:false, searchable:false },
+      { data:'acciones_html', orderable:false, searchable:false, className:'dt-body-right' },
     ],
     language: {
       search: "Buscar:",
@@ -84,14 +84,26 @@ $(function(){
     }
   });
 
+  // ✅ Baja con motivo obligatorio
   $(document).on('click', '.btnRoleBaja', function(){
     const id = $(this).data('id');
     Swal.fire({
-      icon:'warning', title:'¿Dar de baja?', text:'Baja lógica.',
-      showCancelButton:true, confirmButtonText:'Sí', cancelButtonText:'Cancelar', confirmButtonColor:'#D9042B'
+      icon:'warning',
+      title:'¿Dar de baja?',
+      text:'Baja lógica (no se elimina).',
+      input:'textarea',
+      inputPlaceholder:'Motivo de baja…',
+      showCancelButton:true,
+      confirmButtonText:'Sí, dar de baja',
+      cancelButtonText:'Cancelar',
+      confirmButtonColor:'#D9042B',
+      reverseButtons:true,
+      inputValidator:(v)=>{
+        if(!v || String(v).trim().length < 3) return 'Motivo obligatorio (mínimo 3 caracteres).';
+      }
     }).then(async (r)=>{
       if(!r.isConfirmed) return;
-      await $.post(`/roles/${id}/baja`, { motivo:'Baja desde UI' });
+      await $.post(`/roles/${id}/baja`, { motivo: String(r.value).trim() });
       Swal.fire({ icon:'success', title:'Listo', timer:1000, showConfirmButton:false });
       dt.ajax.reload(null,false);
     });

@@ -115,7 +115,7 @@ class RolesController extends Controller
     public function baja(Request $request, Rol $role)
     {
         $data = $request->validate([
-            'motivo' => ['nullable','string','max:500']
+            'motivo' => ['required','string','min:3','max:500']
         ]);
 
         $me = auth()->user();
@@ -127,7 +127,7 @@ class RolesController extends Controller
             $role->is_active = false;
             $role->baja_at = now();
             $role->baja_by = $me->id;
-            $role->baja_motivo = $data['motivo'] ?? 'Baja desde UI';
+            $role->baja_motivo = $data['motivo'];
             $role->save();
 
             if (class_exists(AuditService::class)) {

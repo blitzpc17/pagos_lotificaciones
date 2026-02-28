@@ -19,11 +19,11 @@ $(function(){
       { data:'username' },
       { data:'email' },
       { data:'rol' },
-      { data:'estatus', render:(v)=> `<span class="badge">${v}</span>` },
-      { data:null, orderable:false, render:(row)=> `
+      { data:'estatus', orderable:false, searchable:false }, // ✅ ya viene HTML
+      { data:null, orderable:false, searchable:false, className:'dt-body-right', render:(row)=> `
         <div class="dt-actions">
           <button class="mini primary btnUserEdit" data-id="${row.id}"><i class="fa-regular fa-pen-to-square"></i> Editar</button>
-          <button class="mini danger btnUserBaja" data-id="${row.id}"><i class="fa-regular fa-trash-can"></i> Baja</button>
+          ${row._is_baja ? '' : `<button class="mini danger btnUserBaja" data-id="${row.id}"><i class="fa-regular fa-trash-can"></i> Baja</button>`}
         </div>
       `}
     ],
@@ -116,18 +116,25 @@ $(function(){
     }
   });
 
+  // ✅ Baja con motivo obligatorio
   $(document).on('click','.btnUserBaja', function(){
     const id = $(this).data('id');
     Swal.fire({
       icon:'warning',
       title:'¿Dar de baja usuario?',
+      input:'textarea',
+      inputPlaceholder:'Motivo…',
       showCancelButton:true,
       confirmButtonText:'Sí, baja',
       cancelButtonText:'Cancelar',
-      confirmButtonColor:'#D9042B'
+      confirmButtonColor:'#D9042B',
+      reverseButtons:true,
+      inputValidator:(v)=>{
+        if(!v || String(v).trim().length < 3) return 'Motivo obligatorio (mínimo 3 caracteres).';
+      }
     }).then(async (r)=>{
       if(!r.isConfirmed) return;
-      await $.post(url(R.baja, id), { _token: CSRF });
+      await $.post(url(R.baja, id), { _token: CSRF, motivo: String(r.value).trim() });
       Swal.fire({ icon:'success', title:'Listo', text:'Usuario dado de baja.', timer:1200, showConfirmButton:false });
       dt.ajax.reload(null,false);
     });
