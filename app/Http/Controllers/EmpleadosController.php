@@ -10,6 +10,7 @@ use App\Models\PersonaDireccion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Services\FolioService;
 
 class EmpleadosController extends Controller
 {
@@ -133,6 +134,7 @@ class EmpleadosController extends Controller
         if ($v->fails()) return response()->json(['message'=>'Validation error','errors'=>$v->errors()], 422);
 
         return DB::transaction(function() use ($req){
+
             $personaId = DB::table('personas')->insertGetId([
                 'nombres' => mb_strtoupper(trim($req->nombres),'UTF-8'),
                 'apellido_paterno' => mb_strtoupper(trim($req->apellido_paterno),'UTF-8'),
@@ -143,17 +145,36 @@ class EmpleadosController extends Controller
                 'baja'=>false
             ]);
 
+            $numeroEmpleado = trim((string)($req->numero_empleado ?? ''));
+
+            // ✅ Si viene vacío: genera consecutivo (0001, 0002...) usando variables_globales/folios
+            if ($numeroEmpleado === '') {
+                $numeroEmpleado = FolioService::next('empleados'); // si prefijo vacío => "0001"
+            } else {
+                // si viene numérico (ej "1") lo vuelvo "0001" conforme config
+                if (ctype_digit($numeroEmpleado)) {
+                    $numeroEmpleado = FolioService::format('empleados', (int)$numeroEmpleado);
+                }
+            }
+
+            // evita duplicado (por si el usuario fuerza algo)
+            $exists = DB::table('empleados')->where('numero_empleado', $numeroEmpleado)->exists();
+            if ($exists) {
+                // fallback: si chocó, genera uno nuevo
+                $numeroEmpleado = FolioService::next('empleados');
+            }
+
             $id = DB::table('empleados')->insertGetId([
                 'persona_id' => $personaId,
                 'puesto' => $req->puesto,
                 'puesto_detalle' => $req->puesto_detalle,
-                'numero_empleado' => $req->numero_empleado,
+                'numero_empleado' => $numeroEmpleado,
                 'observaciones' => $req->observaciones,
                 'created_at'=>now(),'updated_at'=>now(),
                 'baja'=>false
             ]);
 
-            return response()->json(['ok'=>true,'id'=>$id]);
+            return response()->json(['ok'=>true,'id'=>$id,'numero_empleado'=>$numeroEmpleado]);
         });
     }
 
@@ -176,6 +197,28 @@ class EmpleadosController extends Controller
         if ($v->fails()) return response()->json(['message'=>'Validation error','errors'=>$v->errors()], 422);
 
         return DB::transaction(function() use ($req, $e){
+
+            $numeroEmpleado = trim((string)($req->numero_empleado ?? ''));
+
+            // Si lo dejan vacío en edición, NO lo borro, lo mantengo.
+            if ($numeroEmpleado === '') {
+                $numeroEmpleado = $e->numero_empleado;
+            } else {
+                if (ctype_digit($numeroEmpleado)) {
+                    $numeroEmpleado = FolioService::format('empleados', (int)$numeroEmpleado);
+                }
+            }
+
+            // evita duplicado con otro empleado
+            $dup = DB::table('empleados')
+                ->where('numero_empleado', $numeroEmpleado)
+                ->where('id','!=',$e->id)
+                ->exists();
+
+            if ($dup) {
+                return response()->json(['message'=>'El número de empleado ya existe.'], 422);
+            }
+
             $e->persona->update([
                 'nombres' => mb_strtoupper(trim($req->nombres),'UTF-8'),
                 'apellido_paterno' => mb_strtoupper(trim($req->apellido_paterno),'UTF-8'),
@@ -187,11 +230,11 @@ class EmpleadosController extends Controller
             $e->update([
                 'puesto' => $req->puesto,
                 'puesto_detalle' => $req->puesto_detalle,
-                'numero_empleado' => $req->numero_empleado,
+                'numero_empleado' => $numeroEmpleado,
                 'observaciones' => $req->observaciones,
             ]);
 
-            return response()->json(['ok'=>true]);
+            return response()->json(['ok'=>true,'numero_empleado'=>$numeroEmpleado]);
         });
     }
 
