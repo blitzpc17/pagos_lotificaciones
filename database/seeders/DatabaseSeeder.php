@@ -101,30 +101,41 @@ class DatabaseSeeder extends Seeder
             $upsertModulo('Dashboard', '/dashboard', 'fa fa-gauge', null, 1, true);
 
             $mCatalogos = $upsertModulo('Catálogos', null, 'fa fa-list', null, 10, true);
-            $mMovimientos = $upsertModulo('Movimientos', null, 'fa fa-money-bill-wave', null, 15, true); // ✅ NUEVO
             $mSeguridad = $upsertModulo('Seguridad', null, 'fa fa-shield-halved', null, 20, true);
-            $mReportes  = $upsertModulo('Reportes', null, 'fa fa-chart-column', null, 30, true);
+            $mLotificaciones =    $upsertModulo('Lotificaciones', null, 'fa fa-map', null, 30, true);
+
+            $mMovimientos = $upsertModulo('Cobros', null, 'fa fa-money-bill-wave', null, 40, true); 
+            $mProveedores = $upsertModulo(' Proveedores', null, 'fa fa-money-bill-wave', null, 50, true); 
+           
+           
+            $mReportes  = $upsertModulo('Reportes', null, 'fa fa-chart-column', null, 60, true);
+       
 
             // Catálogos hijos
             $upsertModulo('Socios', '/socios', 'fa fa-users', $mCatalogos, 1, true);
-            $upsertModulo('Clientes', '/clientes', 'fa fa-user', $mCatalogos, 2, true);
-            $upsertModulo('Proveedores', '/proveedores', 'fa fa-truck-field', $mCatalogos, 3, true);
+            $upsertModulo('Clientes', '/clientes', 'fa fa-user', $mCatalogos, 2, true);          
             $upsertModulo('Empleados', '/empleados', 'fa fa-id-badge', $mCatalogos, 4, true);
 
-            // ✅ NUEVOS: lotificaciones / lotes
-            $upsertModulo('Lotificaciones', '/lotificaciones', 'fa fa-map', $mCatalogos, 5, true);
-            $upsertModulo('Lotes', '/lotes', 'fa fa-border-all', $mCatalogos, 6, true);
-
-            // ✅ NUEVOS: boletas / pagos proveedor
-            $upsertModulo('Boletas de Pago', '/boletas', 'fa fa-receipt', $mMovimientos, 1, true);
-            $upsertModulo('Pagos a Proveedores', '/pagos-proveedor', 'fa fa-hand-holding-dollar', $mMovimientos, 2, true);
-
-            // Seguridad hijos
+             // Seguridad hijos
             $upsertModulo('Roles', '/roles', 'fa fa fa-user-tag', $mSeguridad, 1, true);
             $upsertModulo('Usuarios', '/usuarios', 'fa fa-user-gear', $mSeguridad, 2, true);
             $upsertModulo('Módulos', '/modulos', 'fa fa-sitemap', $mSeguridad, 3, true);
             $upsertModulo('Permisos', '/permisos', 'fa fa-key', $mSeguridad, 4, true);
 
+
+            //lotificaciones / lotes
+         
+            $upsertModulo('Lotificaciones', '/lotificaciones', 'fa fa-map', $mLotificaciones, 1, true);
+            $upsertModulo('Lotes', '/lotes', 'fa fa-border-all', $mLotificaciones, 2, true);
+
+            // boletas
+            $upsertModulo('Boletas de Pago', '/boletas', 'fa fa-receipt', $mMovimientos, 1, true);          
+
+            //proveedores
+            $upsertModulo('Proveedores', '/proveedores', 'fa fa-truck-field', $mProveedores, 1, true);
+            $upsertModulo('Pagos a Proveedor', '/pagos-proveedor', 'fa fa-truck-field', $mProveedores, 2, true);
+
+           
             // Reportes / auditoría / autorizaciones
             $upsertModulo('Auditoría', '/auditoria', 'fa fa-clipboard-list', $mReportes, 1, true);
             $upsertModulo('Autorizaciones', '/autorizaciones', 'fa fa-circle-check', $mReportes, 2, true);
