@@ -6,11 +6,11 @@
 <aside class="sidebar" id="sidebar">
   <div class="brand">
     <div class="logo">
-      <img src="{{ asset('assets/logo.png') }}" alt="Logo"/>
+      <img src="{{ asset('assets/logo-login.png') }}" alt="Logo"/>
     </div>
     <div class="title">
-      <b>Laravel CMS</b>
-      <span>Lotificaciones</span>
+      <b>JD INMOBILIARIA</b>
+      <span>Administrador de pagos</span>
     </div>
   </div>
 

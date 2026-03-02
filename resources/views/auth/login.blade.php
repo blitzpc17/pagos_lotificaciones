@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Login - CMS')
+@section('title', 'Iniciar sesión')
 
 @section('head')
   <link rel="stylesheet" href="{{ asset('assets/css/login.css') }}"/>
@@ -20,19 +20,10 @@
 
       <div class="hero-content">
         <h2>Bienvenido de vuelta</h2>
-        <p>Administra contenido, usuarios, módulos y métricas desde un solo panel.</p>
+        <p>Sistema de administración de pagos</p>
 
-        <div class="hero-pills">
-          <span><i class="fa-solid fa-shield-halved"></i> Roles & permisos</span>
-          <span><i class="fa-solid fa-chart-line"></i> Métricas</span>
-          <span><i class="fa-solid fa-bolt"></i> Rápido</span>
-        </div>
 
-        <div class="hero-stats">
-          <div class="hs"><b>99.9%</b><span>Uptime</span></div>
-          <div class="hs"><b>2s</b><span>Carga</span></div>
-          <div class="hs"><b>24/7</b><span>Soporte</span></div>
-        </div>
+      
       </div>
     </aside>
 
@@ -44,7 +35,7 @@
             <img src="{{ asset('assets/logo-login.png') }}" alt="Logo"/>
           </div>
           <div class="brand-text">
-            <b>Laravel CMS</b>
+            <b>JD INMOBILIARIA</b>
             <span>Acceso al panel</span>
           </div>
         </div>
@@ -96,8 +87,7 @@
         </button>
 
         <footer class="foot">
-          <span>© {{ date('Y') }} · CMS</span>
-          <span class="muted">Tu paleta en modo premium</span>
+          <span>© {{ date('Y') }} · JD Inmobiliaria</span>         
         </footer>
       </form>
     </div>
