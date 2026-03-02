@@ -354,4 +354,43 @@ Route::middleware('auth')->group(function () {
         Route::post('/autorizaciones/{solicitud}/rechazar', [AutorizacionesController::class,'rechazar'])->name('autorizaciones.rechazar');
     });
 
+
+    // =========================
+    // REPORTE PAGOS (MES)
+    // =========================
+    Route::middleware(['module:/reportes-pagos','action:ver','audit:VER'])->group(function () {
+        Route::get('/reportes/pagos', [\App\Http\Controllers\ReportePagosController::class, 'index'])
+            ->name('reportes.pagos.index');
+
+        Route::get('/reportes/pagos/datatable', [\App\Http\Controllers\ReportePagosController::class, 'datatable'])
+            ->name('reportes.pagos.datatable');
+
+        // ✅ Totales (para footer)
+        Route::get('/reportes/pagos/totales', [\App\Http\Controllers\ReportePagosController::class, 'totales'])
+            ->name('reportes.pagos.totales');
+
+        // ✅ Export CSV
+        Route::get('/reportes/pagos/export/csv', [\App\Http\Controllers\ReportePagosController::class, 'exportCsv'])
+            ->name('reportes.pagos.export.csv');
+    });
+
+    // =========================
+    // CORTE CAJA
+    // =========================
+    Route::middleware(['module:/corte-caja','action:ver','audit:VER'])->group(function () {
+        Route::get('/reportes/corte-caja', [\App\Http\Controllers\CorteCajaController::class, 'index'])
+            ->name('reportes.corte_caja.index');
+
+        Route::get('/reportes/corte-caja/datatable', [\App\Http\Controllers\CorteCajaController::class, 'datatable'])
+            ->name('reportes.corte_caja.datatable');
+
+        Route::get('/reportes/corte-caja/totales', [\App\Http\Controllers\CorteCajaController::class, 'totales'])
+            ->name('reportes.corte_caja.totales');
+
+        Route::get('/reportes/corte-caja/export/csv', [\App\Http\Controllers\CorteCajaController::class, 'exportCsv'])
+            ->name('reportes.corte_caja.export.csv');
+    });
+
+
+
 });
