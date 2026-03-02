@@ -140,7 +140,8 @@ class DatabaseSeeder extends Seeder
             $upsertModulo('Auditoría', '/auditoria', 'fa fa-clipboard-list', $mReportes, 1, true);
             $upsertModulo('Autorizaciones', '/autorizaciones', 'fa fa-circle-check', $mReportes, 2, true);
             $upsertModulo('Reporte de pagos', '/reportes-pagos', 'fa fa-file-invoice-dollar', $mReportes, 3, true);
-            $upsertModulo('Corte de caja', '/reportes/corte-caja', 'fa-cash-register', $mReportes, 4, true);
+            $upsertModulo('Corte de caja', '/reportes/corte-caja', 'fa fa-cash-register', $mReportes, 4, true);
+            $upsertModulo('Resumen lotificaciones', '/reportes/lotificaciones-resumen', 'fa fa-chart-pie', $mReportes, 5, true);
 
             // =========================
             // 4) ROLES_MODULOS: admin tiene TODO

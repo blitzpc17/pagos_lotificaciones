@@ -392,5 +392,25 @@ Route::middleware('auth')->group(function () {
     });
 
 
+    Route::middleware(['module:/reporte-lotificaciones-resumen','action:ver','audit:VER'])->group(function () {
+        Route::get('/reportes/lotificaciones-resumen', [\App\Http\Controllers\ReporteLotificacionesResumenController::class, 'index'])
+            ->name('reportes.lotificaciones_resumen.index');
+
+        Route::get('/reportes/lotificaciones-resumen/datatable', [\App\Http\Controllers\ReporteLotificacionesResumenController::class, 'datatable'])
+            ->name('reportes.lotificaciones_resumen.datatable');
+
+        Route::get('/reportes/lotificaciones-resumen/totales', [\App\Http\Controllers\ReporteLotificacionesResumenController::class, 'totales'])
+            ->name('reportes.lotificaciones_resumen.totales');
+
+        // ✅ Export seguro (CSV)
+        Route::get('/reportes/lotificaciones-resumen/export/csv', [\App\Http\Controllers\ReporteLotificacionesResumenController::class, 'exportCsv'])
+            ->name('reportes.lotificaciones_resumen.export.csv');
+
+        // ✅ Export Excel (XLSX) - requiere phpoffice/phpspreadsheet
+        Route::get('/reportes/lotificaciones-resumen/export/xlsx', [\App\Http\Controllers\ReporteLotificacionesResumenController::class, 'exportXlsx'])
+            ->name('reportes.lotificaciones_resumen.export.xlsx');
+    });
+
+
 
 });
